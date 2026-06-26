@@ -90,15 +90,19 @@ def wrap_text(text, max_len=52):
 
 def draw_header(subtitle="Select a tool to launch from the menu below:"):
     logo_lines = [
-        "            ▄             ",
-        "          ▄█ █▄           ",
-        "        ▄██ ▀██▄          ",
-        "      ▄███ ▀ ▀███▄        ",
-        "     ████ ▀ ▀ ▀████       ",
-        "      ▀███ ▄ ▄███▀        ",
-        "        ▀██ ▄██▀          ",
-        "          ▀█ ▀            ",
-        "            █             "
+        "              .             ",
+        "             / \\            ",
+        "           ./   \\.          ",
+        "          /  \\ /  \\         ",
+        "         / .  |  . \\        ",
+        "        < /   |   \\ >       ",
+        "         \\    |    /        ",
+        "        < \\   |   / >       ",
+        "         \\  . | .  /        ",
+        "          `\\  |  /'         ",
+        "            \\ | /           ",
+        "             \\|/            ",
+        "              |             "
     ]
     
     current_workspace = os.getcwd()

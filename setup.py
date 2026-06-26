@@ -74,15 +74,19 @@ def print_centered(text, visible_len, color=""):
 
 def draw_setup_header(subtitle="System Setup and Tool Installer"):
     logo_lines = [
-        "            ▄             ",
-        "          ▄█ █▄           ",
-        "        ▄██ ▀██▄          ",
-        "      ▄███ ▀ ▀███▄        ",
-        "     ████ ▀ ▀ ▀████       ",
-        "      ▀███ ▄ ▄███▀        ",
-        "        ▀██ ▄██▀          ",
-        "          ▀█ ▀            ",
-        "            █             "
+        "              .             ",
+        "             / \\            ",
+        "           ./   \\.          ",
+        "          /  \\ /  \\         ",
+        "         / .  |  . \\        ",
+        "        < /   |   \\ >       ",
+        "         \\    |    /        ",
+        "        < \\   |   / >       ",
+        "         \\  . | .  /        ",
+        "          `\\  |  /'         ",
+        "            \\ | /           ",
+        "             \\|/            ",
+        "              |             "
     ]
     
     for line in logo_lines:
