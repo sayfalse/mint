@@ -1,19 +1,8 @@
-# MINT — The Unified OSINT & Media Command Center
+<p align="center">
+  <img src="logo.png" alt="MINT Logo" width="400">
+</p>
 
-```text
-              ▄              
-            ▄█▀█▄            
-           ▄██ ██▄           
-          ████ ████          
-         ▄████ ████▄         
-        ██████ ██████        
-         ▀████ ████▀         
-        ▄█████ █████▄        
-         ▀████ ████▀         
-           ▀██ ██▀           
-             █ █             
-             ▀ ▀             
-```
+<h1 align="center">MINT — The Unified OSINT & Media Command Center</h1>
 
 **MINT** is an interactive, terminal-based command center that unifies industry-standard OSINT (Open Source Intelligence) tools and a robust media archiver into a single, cohesive interface. Built for researchers, security analysts, and developers, MINT simplifies target intelligence gathering, social media investigation, and media preservation under a clean, keyboard-driven environment.
 
