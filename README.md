@@ -27,7 +27,7 @@
 
 ## Smart Path-Resolution Installer
 
-The MINT installer (`setup.py` / `setup.bat`) is designed to protect your file system from clutter. It prompts you once for a parent directory and automatically structures the installation cleanly:
+The MINT installer (`setup.bat` / `setup.sh`) is designed to protect your file system from clutter. It prompts you once for a parent directory and automatically structures the installation cleanly:
 * **Tools Directory:** Recreated as `<parent_folder>\MINT_Tools\` to hold all cloned OSINT scanners.
 * **Media Directory:** Recreated as `<parent_folder>\mint-social\` to store downloaded media, profile logs, and cookies.
 * **Global Wrappers:** Automatically registers a global `mint` command wrapper in your system path, allowing you to launch the Command Center from any terminal window.
@@ -62,7 +62,8 @@ MINT automatically manages the environment checks, directory structures, tool cl
    ```
 2. Run the setup script:
    ```bash
-   python setup.py
+   chmod +x setup.sh
+   ./setup.sh
    ```
 
 ---

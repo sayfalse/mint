@@ -14,9 +14,9 @@ if ! command -v python3 &> /dev/null; then
     exit 1
 fi
 
-# 2. Check if setup.py is in the current directory
-if [ -f "setup.py" ]; then
-    python3 setup.py
+# 2. Check if installer.py is in the current directory
+if [ -f "installer.py" ]; then
+    python3 installer.py
 else
     # If run via curl | bash, clone the repo to a temporary folder and run setup
     echo "  ❯ Cloning MINT repository..."
@@ -31,7 +31,7 @@ else
     fi
     
     cd "$TEMP_DIR" || exit 1
-    python3 setup.py
+    python3 installer.py
     
     # Clean up the temporary clone after setup completes
     rm -rf "$TEMP_DIR"
