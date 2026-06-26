@@ -387,6 +387,18 @@ def main():
                     f.write("#\n")
                     f.write(f"# Example: https://www.{pf.split('_')[0]}.com/target_username\n\n")
                     
+        # Create empty cookie files with helpful comments
+        cookie_dir = os.path.join(social_dir, "cookies")
+        cookie_files = ["facebook.com_cookies.txt", "instagram.com_cookies.txt", "tiktok.com_cookies.txt", "x.com_cookies.txt"]
+        for cf in cookie_files:
+            cf_path = os.path.join(cookie_dir, cf)
+            if not os.path.exists(cf_path):
+                with open(cf_path, "w", encoding="utf-8") as f:
+                    c_name = cf.split(".")[0].capitalize()
+                    f.write("# Netscape HTTP Cookie File\n")
+                    f.write(f"# MINT Social Tool - {c_name} Cookies File\n")
+                    f.write("# Paste your exported cookies for this platform here in Netscape format.\n\n")
+                    
         print(Fore.GREEN + Style.BRIGHT + "[ SUCCESS ]")
     except Exception as e:
         print(Fore.RED + Style.BRIGHT + "[ FAILED  ]")
