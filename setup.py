@@ -324,11 +324,10 @@ def main():
     print()
     
     user_home = os.path.expanduser("~")
-    default_tools_path = os.path.join(user_home, "MINT_Tools")
-    default_social_path = os.path.join(user_home, "mint-social")
+    default_parent_dir = os.path.join(user_home, "mint")
     
-    # 1. Prompt for 4 OSINT Tools Location
-    print(Fore.GREEN + f"  ❯ OSINT Tools Folder [Default: {default_tools_path}]: " + Fore.WHITE, end="")
+    # Prompt for MINT Parent Directory
+    print(Fore.GREEN + f"  ❯ MINT Parent Folder [Default: {default_parent_dir}]: " + Fore.WHITE, end="")
     sys.stdout.flush()
     try:
         user_input = input().strip()
@@ -336,31 +335,19 @@ def main():
         print(Fore.YELLOW + "\n\n  [!] Setup cancelled by user.")
         return
     if user_input:
-        tools_dir = os.path.abspath(user_input)
-        # Automatically append 'MINT_Tools' if not already present to keep files organized
-        if not tools_dir.lower().endswith("mint_tools") and not tools_dir.lower().endswith("mint_tools\\"):
-            tools_dir = os.path.join(tools_dir, "MINT_Tools")
+        parent_dir = os.path.abspath(user_input)
+        # Automatically append 'mint' if the path does not already end with it to keep it organized
+        if not parent_dir.lower().endswith("mint") and not parent_dir.lower().endswith("mint\\"):
+            parent_dir = os.path.join(parent_dir, "mint")
     else:
-        tools_dir = os.path.abspath(default_tools_path)
-    
-    # 2. Prompt for MINT Social Location
-    print(Fore.GREEN + f"  ❯ MINT Social Folder [Default: {default_social_path}]: " + Fore.WHITE, end="")
-    sys.stdout.flush()
-    try:
-        user_input = input().strip()
-    except KeyboardInterrupt:
-        print(Fore.YELLOW + "\n\n  [!] Setup cancelled by user.")
-        return
-    if user_input:
-        social_dir = os.path.abspath(user_input)
-        # Automatically append 'mint-social' if not already present to keep files organized
-        if not social_dir.lower().endswith("mint-social") and not social_dir.lower().endswith("mint-social\\"):
-            social_dir = os.path.join(social_dir, "mint-social")
-    else:
-        social_dir = os.path.abspath(default_social_path)
+        parent_dir = os.path.abspath(default_parent_dir)
+        
+    tools_dir = os.path.join(parent_dir, "MINT_Tools")
+    social_dir = os.path.join(parent_dir, "mint-social")
     
     print()
     print(Fore.YELLOW + "  [+] Selected Locations:")
+    print(Fore.LIGHTBLACK_EX + f"   • MINT Parent Folder: {Fore.WHITE}{parent_dir}")
     print(Fore.LIGHTBLACK_EX + f"   • OSINT Tools Folder: {Fore.WHITE}{tools_dir}")
     print(Fore.LIGHTBLACK_EX + f"   • Unified MINT Social: {Fore.WHITE}{social_dir}")
     print()
