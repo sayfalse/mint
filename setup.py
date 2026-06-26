@@ -335,7 +335,13 @@ def main():
     except KeyboardInterrupt:
         print(Fore.YELLOW + "\n\n  [!] Setup cancelled by user.")
         return
-    tools_dir = os.path.abspath(user_input if user_input else default_tools_path)
+    if user_input:
+        tools_dir = os.path.abspath(user_input)
+        # Automatically append 'MINT_Tools' if not already present to keep files organized
+        if not tools_dir.lower().endswith("mint_tools") and not tools_dir.lower().endswith("mint_tools\\"):
+            tools_dir = os.path.join(tools_dir, "MINT_Tools")
+    else:
+        tools_dir = os.path.abspath(default_tools_path)
     
     # 2. Prompt for MINT Social Location
     print(Fore.GREEN + f"  ❯ MINT Social Folder [Default: {default_social_path}]: " + Fore.WHITE, end="")
@@ -345,7 +351,13 @@ def main():
     except KeyboardInterrupt:
         print(Fore.YELLOW + "\n\n  [!] Setup cancelled by user.")
         return
-    social_dir = os.path.abspath(user_input if user_input else default_social_path)
+    if user_input:
+        social_dir = os.path.abspath(user_input)
+        # Automatically append 'mint-social' if not already present to keep files organized
+        if not social_dir.lower().endswith("mint-social") and not social_dir.lower().endswith("mint-social\\"):
+            social_dir = os.path.join(social_dir, "mint-social")
+    else:
+        social_dir = os.path.abspath(default_social_path)
     
     print()
     print(Fore.YELLOW + "  [+] Selected Locations:")
