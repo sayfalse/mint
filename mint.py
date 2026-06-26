@@ -182,6 +182,25 @@ def run_command(cmd_string):
     except Exception as e:
         print(Fore.RED + f"\n  [!] Error executing command: {e}")
 
+import re
+
+def is_safe_username(username):
+    if not username:
+        return False
+    return bool(re.match(r'^[a-zA-Z0-9._\-@]+$', username))
+
+def is_safe_email(email):
+    if not email:
+        return False
+    return bool(re.match(r'^[a-zA-Z0-9._\-@+]+$', email))
+
+def is_safe_url(url):
+    if not url:
+        return False
+    if any(char in url for char in [';', '|', '$', '`', '<', '>', '"', "'", '\\', ' ']):
+        return False
+    return bool(re.match(r'^[a-zA-Z0-9.:/?&=\-_+@%,]+$', url))
+
 def parse_profile_url(url, platform):
     url = url.strip()
     if not url:
@@ -446,6 +465,19 @@ def add_social_profile_interactive():
     if not target:
         return
         
+    # Input validation to prevent shell injection
+    is_url = "/" in target or "." in target or target.lower().startswith("http")
+    if is_url:
+        if not is_safe_url(target):
+            print(Fore.RED + f"\n  [!] Invalid or unsafe URL format.")
+            time.sleep(2.5)
+            return
+    else:
+        if not is_safe_username(target):
+            print(Fore.RED + f"\n  [!] Invalid or unsafe username format.")
+            time.sleep(2.5)
+            return
+            
     # Automatically make sure directory exists
     os.makedirs(BASE, exist_ok=True)
     profile_file = os.path.join(BASE, filename)
@@ -546,6 +578,19 @@ def run_direct_profile_download():
     target = prompt_input("Enter target username or profile URL")
     if not target:
         return
+        
+    # Input validation to prevent shell injection
+    is_url = "/" in target or "." in target or target.lower().startswith("http")
+    if is_url:
+        if not is_safe_url(target):
+            print(Fore.RED + f"\n  [!] Invalid or unsafe URL format.")
+            time.sleep(2.5)
+            return
+    else:
+        if not is_safe_username(target):
+            print(Fore.RED + f"\n  [!] Invalid or unsafe username format.")
+            time.sleep(2.5)
+            return
         
     username = parse_profile_url(target, platform_key)
     if not username:
@@ -713,10 +758,10 @@ def update_single_tool(key, name, path):
                     try:
                         with open(req_file, "r", encoding="utf-8") as f:
                             content = f.read()
-                        if "lxml>=4.9.2,<5" in content:
-                            content = content.replace("lxml>=4.9.2,<5", "lxml>=4.9.2")
+                        new_content = re.sub(r'lxml\s*>=\s*4\.9\.2\s*,\s*<\s*5', 'lxml>=4.9.2', content)
+                        if new_content != content:
                             with open(req_file, "w", encoding="utf-8") as f:
-                                f.write(content)
+                                f.write(new_content)
                     except Exception as e:
                         print(Fore.RED + f"    [!] Warning: Failed to patch SpiderFoot requirements: {e}")
 
@@ -744,12 +789,12 @@ def update_single_tool(key, name, path):
         zip_url = f"https://github.com/{repo}/archive/refs/heads/master.zip"
         try:
             req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 zip_data = response.read()
         except:
             zip_url = f"https://github.com/{repo}/archive/refs/heads/main.zip"
             req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 zip_data = response.read()
                 
         temp_dir = os.path.join(os.path.dirname(path), f"{key}_temp_update")
@@ -783,10 +828,10 @@ def update_single_tool(key, name, path):
                     try:
                         with open(req_file, "r", encoding="utf-8") as f:
                             content = f.read()
-                        if "lxml>=4.9.2,<5" in content:
-                            content = content.replace("lxml>=4.9.2,<5", "lxml>=4.9.2")
+                        new_content = re.sub(r'lxml\s*>=\s*4\.9\.2\s*,\s*<\s*5', 'lxml>=4.9.2', content)
+                        if new_content != content:
                             with open(req_file, "w", encoding="utf-8") as f:
-                                f.write(content)
+                                f.write(new_content)
                     except Exception as e:
                         print(Fore.RED + f"    [!] Warning: Failed to patch SpiderFoot requirements: {e}")
                 subprocess.run([sys.executable, "-m", "pip", "install", "-r", req_file], check=True)
@@ -948,6 +993,12 @@ def main():
                     run_tools_update()
                     continue
                 
+                if not is_safe_username(username):
+                    print(Fore.RED + "\n  [!] Invalid or unsafe username format.")
+                    print(Fore.YELLOW + "  [+] Usernames must contain only letters, numbers, periods, underscores, hyphens, and @.")
+                    time.sleep(3)
+                    continue
+                
                 print(Fore.YELLOW + f"\n  [+] Querying 300+ platforms for '{username}'...\n")
                 run_command(f"sherlock {username}")
                 print()
@@ -962,6 +1013,12 @@ def main():
                     continue
                 if email.lower() == "/update":
                     run_tools_update()
+                    continue
+                
+                if not is_safe_email(email):
+                    print(Fore.RED + "\n  [!] Invalid or unsafe email format.")
+                    print(Fore.YELLOW + "  [+] Emails must contain only letters, numbers, periods, underscores, hyphens, +, and @.")
+                    time.sleep(3)
                     continue
                 
                 print(Fore.YELLOW + f"\n  [+] Querying registration endpoints for '{email}'...\n")
@@ -992,7 +1049,18 @@ def main():
                     run_tools_update()
                     continue
                 
+                if not is_safe_username(username):
+                    print(Fore.RED + "\n  [!] Invalid or unsafe username format.")
+                    print(Fore.YELLOW + "  [+] Usernames must contain only letters, numbers, periods, underscores, hyphens, and @.")
+                    time.sleep(3)
+                    continue
+                
                 sessionid = prompt_input("Enter Instagram Session ID (optional - press Enter to skip)")
+                if sessionid and not re.match(r'^[a-zA-Z0-9:_]+$', sessionid):
+                    print(Fore.RED + "\n  [!] Invalid or unsafe Session ID format.")
+                    time.sleep(3)
+                    continue
+                    
                 if sessionid:
                     cmd = f"toutatis -u {username} -s {sessionid}"
                 else:

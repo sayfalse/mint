@@ -3,6 +3,7 @@ import sys
 import subprocess
 import sysconfig
 import json
+import re
 
 # Force UTF-8 encoding on Windows to prevent UnicodeEncodeErrors with box-drawing characters
 if sys.platform.startswith('win'):
@@ -169,7 +170,7 @@ def install_tool_from_github(key, info, target_dir, has_git):
                 import shutil
                 
                 req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req) as response:
+                with urllib.request.urlopen(req, timeout=15) as response:
                     zip_data = response.read()
                 
                 with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
@@ -200,10 +201,10 @@ def install_tool_from_github(key, info, target_dir, has_git):
                 try:
                     with open(req_file, "r", encoding="utf-8") as f:
                         content = f.read()
-                    if "lxml>=4.9.2,<5" in content:
-                        content = content.replace("lxml>=4.9.2,<5", "lxml>=4.9.2")
+                    new_content = re.sub(r'lxml\s*>=\s*4\.9\.2\s*,\s*<\s*5', 'lxml>=4.9.2', content)
+                    if new_content != content:
                         with open(req_file, "w", encoding="utf-8") as f:
-                            f.write(content)
+                            f.write(new_content)
                 except Exception as e:
                     print(f"    [!] Warning: Failed to patch SpiderFoot requirements: {e}")
 
