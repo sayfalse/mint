@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mint-osint"
+version = "1.0.0"
+description = "MINT — The Unified OSINT & Media Command Center"
+readme = "README.md"
+authors = [{ name = "sayfalse" }]
+requires-python = ">=3.10"
+dependencies = [
+    "colorama>=0.4.6"
+]
+
+[project.scripts]
+mint = "mint:main"
+
+[tool.setuptools]
+py-modules = ["mint"]
