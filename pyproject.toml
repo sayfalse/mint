@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mint-osint"
-version = "1.0.4"
+version = "1.0.5"
 description = "MINT — The Unified OSINT & Media Command Center"
 readme = "README.md"
 authors = [{ name = "sayfalse" }]

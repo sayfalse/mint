@@ -186,14 +186,29 @@ def parse_profile_url(url, platform):
     url = url.strip()
     if not url:
         return None
+        
+    # Check if it's a plain username (no slashes and doesn't start with http)
+    temp_url = url
+    while temp_url.endswith("/"):
+        temp_url = temp_url[:-1]
+        
+    if "/" not in temp_url and not temp_url.lower().startswith("http"):
+        # It's a plain username
+        username = temp_url.replace("@", "")
+        username = username.split("?")[0].split("#")[0].strip()
+        return username if username else None
+        
+    # Otherwise parse as URL
     if not url.lower().startswith("http"):
         url = "https://" + url
+        
     t = url.replace("http://", "").replace("https://", "")
     if t.startswith("/"):
         t = t[1:]
     parts = t.split("/")
     if len(parts) < 2:
         return None
+        
     dom = parts[0].replace("www.", "").lower()
     usr = parts[1]
     
@@ -310,6 +325,18 @@ def download_highlights(dest_dir, cookies_arg, platform, username):
 def download_profile(username, dest_dir, platform, original_url, media_choice):
     cookies_arg = get_cookies_arg(platform)
     url = original_url.strip()
+    
+    # Reconstruct URL if it's a plain username
+    if "/" not in url and not url.lower().startswith("http"):
+        if platform == "instagram":
+            url = f"https://www.instagram.com/{username}/"
+        elif platform == "tiktok":
+            url = f"https://www.tiktok.com/@{username}/"
+        elif platform == "facebook":
+            url = f"https://www.facebook.com/{username}/"
+        elif platform == "x":
+            url = f"https://x.com/{username}/"
+            
     while url.endswith("/"):
         url = url[:-1]
         
@@ -423,8 +450,32 @@ def add_social_profile_interactive():
     os.makedirs(BASE, exist_ok=True)
     profile_file = os.path.join(BASE, filename)
     
-    # Check if file exists. If not, write a nice header first.
+    # Check if file exists
     file_existed = os.path.exists(profile_file)
+    
+    # Duplicate checking
+    if file_existed:
+        try:
+            with open(profile_file, "r", encoding="utf-8", errors="ignore") as f:
+                existing_lines = f.readlines()
+            
+            existing_usernames = []
+            for line in existing_lines:
+                line_stripped = line.strip()
+                if line_stripped and not line_stripped.startswith("#") and not line_stripped.startswith(";"):
+                    usr = parse_profile_url(line_stripped, platform_key)
+                    if usr:
+                        existing_usernames.append(usr.lower())
+            
+            new_username = parse_profile_url(target, platform_key)
+            if new_username and new_username.lower() in existing_usernames:
+                print(Fore.YELLOW + f"\n  [!] The profile '{target}' (resolved as '{new_username}') is already in your {display_name} list.")
+                print()
+                input("  Press Enter to return to menu...")
+                return
+        except Exception as e:
+            pass
+            
     try:
         with open(profile_file, "a", encoding="utf-8") as f:
             if not file_existed:
@@ -474,9 +525,16 @@ def run_direct_profile_download():
         return
         
     username = parse_profile_url(target, platform_key)
-    if not username or username == "INVALID_URL":
-        username = target # Fallback if URL parsing is not perfectly matched
-        
+    if not username:
+        # Mismatched or invalid URL validation
+        if "/" in target or "." in target or target.lower().startswith("http"):
+            print(Fore.RED + f"\n  [!] Invalid URL for {display_name}.")
+            print(Fore.YELLOW + "  [+] Please make sure the URL matches the selected platform.")
+            time.sleep(2.5)
+            return
+        else:
+            username = target
+            
     # Now show the media choice menu!
     selected_media_index = 0
     while True:
