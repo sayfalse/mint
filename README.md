@@ -67,22 +67,29 @@ MINT automatically manages the environment checks, directory structures, tool cl
 
 ---
 
-## Package Managers (Planned & Future Distribution)
+## Package Managers
 
-MINT can be installed using the automated bootstrapper or via standard system package managers:
+MINT can be installed directly through your system's package managers. The active and planned methods are listed below:
 
 ```bash
-# YOLO
+# YOLO (Active - macOS & Linux)
 curl -fsSL https://raw.githubusercontent.com/sayfalse/mint/main/setup.sh | bash
 
-# Package managers
-pip install mint-osint          # Python Package Index (PyPI)
-scoop install mint-osint        # Windows Scoop bucket
-choco install mint-osint        # Windows Chocolatey
-brew install sayfalse/tap/mint  # macOS and Linux Homebrew Tap
-sudo pacman -S mint-osint       # Arch Linux (Stable)
-paru -S mint-osint-bin          # Arch Linux (AUR)
-nix run github:sayfalse/mint    # Nix (Instant execution)
+# Homebrew Tap (Active - macOS & Linux)
+brew install sayfalse/tap/mint
+
+# Nix (Active - Cross-platform reproducible execution)
+nix run github:sayfalse/mint
+
+# Local Pip Installation (Active - install from local clone)
+pip install .
+
+# Planned Distributions (Future releases)
+pip install mint-osint          # PyPI (Planned)
+scoop install mint-osint        # Scoop (Planned)
+choco install mint-osint        # Chocolatey (Planned)
+sudo pacman -S mint-osint       # Arch Linux (Planned)
+paru -S mint-osint-bin          # Arch Linux AUR (Planned)
 ```
 
 ---
