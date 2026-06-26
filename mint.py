@@ -453,6 +453,30 @@ def add_social_profile_interactive():
     # Check if file exists
     file_existed = os.path.exists(profile_file)
     
+    # Parse username from target
+    new_username = parse_profile_url(target, platform_key)
+    if not new_username:
+        # Mismatched or invalid URL validation
+        if "/" in target or "." in target or target.lower().startswith("http"):
+            print(Fore.RED + f"\n  [!] Invalid URL for {display_name}.")
+            print(Fore.YELLOW + "  [+] Please make sure the URL matches the selected platform.")
+            time.sleep(2.5)
+            return
+        else:
+            new_username = target
+            
+    # Reconstruct the full profile URL
+    if platform_key == "instagram":
+        profile_url = f"https://www.instagram.com/{new_username}/"
+    elif platform_key == "tiktok":
+        profile_url = f"https://www.tiktok.com/@{new_username}/"
+    elif platform_key == "facebook":
+        profile_url = f"https://www.facebook.com/{new_username}/"
+    elif platform_key == "x":
+        profile_url = f"https://x.com/{new_username}/"
+    else:
+        profile_url = target
+        
     # Duplicate checking
     if file_existed:
         try:
@@ -467,8 +491,7 @@ def add_social_profile_interactive():
                     if usr:
                         existing_usernames.append(usr.lower())
             
-            new_username = parse_profile_url(target, platform_key)
-            if new_username and new_username.lower() in existing_usernames:
+            if new_username.lower() in existing_usernames:
                 print(Fore.YELLOW + f"\n  [!] The profile '{target}' (resolved as '{new_username}') is already in your {display_name} list.")
                 print()
                 input("  Press Enter to return to menu...")
@@ -482,8 +505,8 @@ def add_social_profile_interactive():
                 f.write(f"# MINT Social Tool - {display_name} Profiles List\n")
                 f.write("# Enter profile URLs or usernames here, one per line.\n")
                 f.write("# Lines starting with # or ; are ignored.\n#\n\n")
-            f.write(f"{target}\n")
-        print(Fore.GREEN + Style.BRIGHT + f"\n  [+] Successfully added '{target}' to {filename}.")
+            f.write(f"{profile_url}\n")
+        print(Fore.GREEN + Style.BRIGHT + f"\n  [+] Successfully added '{profile_url}' to {filename}.")
     except Exception as e:
         print(Fore.RED + f"\n  [!] Error writing to file: {e}")
         
