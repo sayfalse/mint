@@ -84,12 +84,14 @@ nix run github:sayfalse/mint
 # Local Pip Installation (Active - install from local clone)
 pip install .
 
-# Planned Distributions (Future releases)
-pip install mint-osint          # PyPI (Planned)
-scoop install mint-osint        # Scoop (Planned)
-choco install mint-osint        # Chocolatey (Planned)
-sudo pacman -S mint-osint       # Arch Linux (Planned)
-paru -S mint-osint-bin          # Arch Linux AUR (Planned)
+# Scoop (Active - Windows)
+scoop bucket add sayfalse https://github.com/sayfalse/scoop-bucket.git
+scoop install sayfalse/mint
+
+# Planned & Pre-Configured Distributions (Ready to publish)
+pip install mint-osint          # PyPI (Automated via GitHub Action in repo)
+choco install mint-osint        # Chocolatey (Nuspec & install script in dist/choco/)
+paru -S mint-osint-bin          # Arch Linux AUR (PKGBUILD script in dist/aur/)
 ```
 
 ---
