@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>mint-osint</id>
+    <version>1.0.0</version>
+    <title>MINT Command Center</title>
+    <authors>sayfalse</authors>
+    <projectUrl>https://github.com/sayfalse/mint</projectUrl>
+    <licenseUrl>https://github.com/sayfalse/mint/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/sayfalse/mint</projectSourceUrl>
+    <description>MINT — The Unified OSINT &amp; Media Command Center (unifying Sherlock, Holehe, SpiderFoot, Toutatis, and a social archiver under an interactive CLI)</description>
+    <summary>MINT unifies Sherlock, Holehe, SpiderFoot, Toutatis, and a social downloader under an interactive TUI.</summary>
+    <tags>osint security scanner media-downloader downloader sherlock holehe spiderfoot toutatis</tags>
+    <dependencies>
+      <dependency id="python3" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

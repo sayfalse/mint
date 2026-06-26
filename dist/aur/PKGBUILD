@@ -1,0 +1,31 @@
+# Maintainer: sayfalse <sayfalse@users.noreply.github.com>
+pkgname=mint-osint-bin
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="MINT — The Unified OSINT & Media Command Center"
+arch=('any')
+url="https://github.com/sayfalse/mint"
+license=('MIT')
+depends=('python' 'python-colorama')
+makedepends=('git')
+provides=('mint-osint')
+conflicts=('mint-osint')
+source=("git+https://github.com/sayfalse/mint.git#branch=main")
+sha256sums=('SKIP')
+
+package() {
+  cd "${srcdir}/mint"
+  
+  # Install python core files into share
+  install -Dm755 mint.py "${pkgdir}/usr/share/mint/mint.py"
+  install -Dm755 setup.py "${pkgdir}/usr/share/mint/setup.py"
+  install -Dm755 setup.sh "${pkgdir}/usr/share/mint/setup.sh"
+  
+  # Create the global binary wrapper executable in /usr/bin/mint
+  mkdir -p "${pkgdir}/usr/bin"
+  cat <<EOF > "${pkgdir}/usr/bin/mint"
+#!/bin/bash
+exec python3 /usr/share/mint/mint.py "\$@"
+EOF
+  chmod +x "${pkgdir}/usr/bin/mint"
+}
