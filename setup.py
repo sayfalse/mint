@@ -74,28 +74,22 @@ def print_centered(text, visible_len, color=""):
 
 def draw_setup_header(subtitle="System Setup and Tool Installer"):
     logo_lines = [
-        "          ▄          ",
-        "        ▄███▄        ",
-        "       ▄█▒█▒█▄       ",
-        "      ██▒█▓█▒██      ",
-        "     ████▒▓▒████     ",
-        "    ██████▓██████    ",
-        "   ███████▓███████   ",
-        "  ▄██▒████▓████▒██▄  ",
-        " ▀████▒███▓███▒████▀ ",
-        " ██████▒██▓██▒██████ ",
-        "▄████████▒▓▒████████▄",
-        " ▀████████▓████████▀ ",
-        "  ▀███████▓███████▀  ",
-        "    ▀█████▓█████▀    ",
-        "      ▀███▓███▀      ",
-        "        ▀███▀        ",
-        "          █          ",
-        "          █          "
+        "              ▄              ",
+        "            ▄█▀█▄            ",
+        "           ▄██ ██▄           ",
+        "          ████ ████          ",
+        "         ▄████ ████▄         ",
+        "        ██████ ██████        ",
+        "         ▀████ ████▀         ",
+        "        ▄█████ █████▄        ",
+        "         ▀████ ████▀         ",
+        "           ▀██ ██▀           ",
+        "             █ █             ",
+        "             ▀ ▀             "
     ]
     
     for line in logo_lines:
-        print_centered(line, 21, Fore.GREEN)
+        print_centered(line, 26, Fore.GREEN)
         
     print()
     print_centered("M I N T   S E T U P", 19, Fore.GREEN + Style.BRIGHT)

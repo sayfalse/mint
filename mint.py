@@ -90,30 +90,24 @@ def wrap_text(text, max_len=52):
 
 def draw_header(subtitle="Select a tool to launch from the menu below:"):
     logo_lines = [
-        "          ▄          ",
-        "        ▄███▄        ",
-        "       ▄█▒█▒█▄       ",
-        "      ██▒█▓█▒██      ",
-        "     ████▒▓▒████     ",
-        "    ██████▓██████    ",
-        "   ███████▓███████   ",
-        "  ▄██▒████▓████▒██▄  ",
-        " ▀████▒███▓███▒████▀ ",
-        " ██████▒██▓██▒██████ ",
-        "▄████████▒▓▒████████▄",
-        " ▀████████▓████████▀ ",
-        "  ▀███████▓███████▀  ",
-        "    ▀█████▓█████▀    ",
-        "      ▀███▓███▀      ",
-        "        ▀███▀        ",
-        "          █          ",
-        "          █          "
+        "              ▄              ",
+        "            ▄█▀█▄            ",
+        "           ▄██ ██▄           ",
+        "          ████ ████          ",
+        "         ▄████ ████▄         ",
+        "        ██████ ██████        ",
+        "         ▀████ ████▀         ",
+        "        ▄█████ █████▄        ",
+        "         ▀████ ████▀         ",
+        "           ▀██ ██▀           ",
+        "             █ █             ",
+        "             ▀ ▀             "
     ]
     
     current_workspace = os.getcwd()
     
     for line in logo_lines:
-        print_centered(line, 21, Fore.GREEN)
+        print_centered(line, 26, Fore.GREEN)
         
     print()
     print_centered("M I N T   v1.0", 14, Fore.GREEN + Style.BRIGHT)
