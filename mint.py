@@ -355,6 +355,171 @@ def run_social_tool_downloads(media_choice):
                     dest_dir = os.path.join(BASE, platform, username)
                     download_profile(username, dest_dir, platform, line, media_choice)
 
+def draw_social_main_menu(selected_index):
+    clear_screen()
+    draw_header("Running: MINT Social Tool (Social Downloader)")
+    
+    print_centered("=== MINT Social Tool ===", 24, Fore.GREEN + Style.BRIGHT)
+    print()
+    print_centered("What do you want to do?", 23, Fore.WHITE + Style.BRIGHT)
+    print()
+    
+    menu_options = [
+        "Add a profile to your lists",
+        "Download from a single profile directly",
+        "Run batch downloads from your lists",
+        "Back to Main Menu"
+    ]
+    
+    menu_width = 45
+    width = get_terminal_width()
+    menu_padding = max(0, (width - menu_width) // 2)
+    
+    for i, opt in enumerate(menu_options):
+        if i == selected_index:
+            print(" " * menu_padding + Fore.GREEN + Style.BRIGHT + f"  ❯ " + Back.GREEN + Fore.BLACK + f" [{i+1}] {opt.ljust(40)} " + Style.RESET_ALL)
+        else:
+            print(" " * menu_padding + Fore.WHITE + f"    [{i+1}] {opt}")
+            
+    print()
+    print_centered("  ↑/↓: Move  •  Enter: Select  •  1-4: Hotkey  ", 48, Fore.BLACK + Back.LIGHTBLACK_EX)
+    print()
+
+def add_social_profile_interactive():
+    clear_screen()
+    draw_header("MINT Social Tool - Add Target Profile")
+    print(Fore.GREEN + Style.BRIGHT + "  === Add Target Profile ===")
+    print()
+    print(Fore.WHITE + "  Select the social media platform:")
+    print(Fore.WHITE + "    [1] Instagram")
+    print(Fore.WHITE + "    [2] TikTok")
+    print(Fore.WHITE + "    [3] Facebook")
+    print(Fore.WHITE + "    [4] X / Twitter")
+    print()
+    
+    platform_choice = prompt_input("Select option (1-4) or press Enter to cancel")
+    if not platform_choice:
+        return
+        
+    platforms = {
+        "1": ("instagram", "instagram_profiles.txt", "Instagram"),
+        "2": ("tiktok", "tiktok_profiles.txt", "TikTok"),
+        "3": ("facebook", "facebook_profiles.txt", "Facebook"),
+        "4": ("x", "x_profiles.txt", "X/Twitter")
+    }
+    
+    if platform_choice not in platforms:
+        print(Fore.RED + "\n  [!] Invalid option.")
+        time.sleep(1.5)
+        return
+        
+    platform_key, filename, display_name = platforms[platform_choice]
+    print(Fore.WHITE + f"\n  Adding profile for {Fore.GREEN}{display_name}{Fore.WHITE}:")
+    target = prompt_input("Enter the username or profile URL to add")
+    if not target:
+        return
+        
+    # Automatically make sure directory exists
+    os.makedirs(BASE, exist_ok=True)
+    profile_file = os.path.join(BASE, filename)
+    
+    # Check if file exists. If not, write a nice header first.
+    file_existed = os.path.exists(profile_file)
+    try:
+        with open(profile_file, "a", encoding="utf-8") as f:
+            if not file_existed:
+                f.write(f"# MINT Social Tool - {display_name} Profiles List\n")
+                f.write("# Enter profile URLs or usernames here, one per line.\n")
+                f.write("# Lines starting with # or ; are ignored.\n#\n\n")
+            f.write(f"{target}\n")
+        print(Fore.GREEN + Style.BRIGHT + f"\n  [+] Successfully added '{target}' to {filename}.")
+    except Exception as e:
+        print(Fore.RED + f"\n  [!] Error writing to file: {e}")
+        
+    print()
+    input("  Press Enter to return to menu...")
+
+def run_direct_profile_download():
+    clear_screen()
+    draw_header("MINT Social Tool - Quick Download")
+    print(Fore.GREEN + Style.BRIGHT + "  === Quick Download (Single Profile) ===")
+    print()
+    print(Fore.WHITE + "  Select the platform:")
+    print(Fore.WHITE + "    [1] Instagram")
+    print(Fore.WHITE + "    [2] TikTok")
+    print(Fore.WHITE + "    [3] Facebook")
+    print(Fore.WHITE + "    [4] X / Twitter")
+    print()
+    
+    platform_choice = prompt_input("Select option (1-4) or press Enter to cancel")
+    if not platform_choice:
+        return
+        
+    platforms = {
+        "1": ("instagram", "Instagram"),
+        "2": ("tiktok", "TikTok"),
+        "3": ("facebook", "Facebook"),
+        "4": ("x", "X/Twitter")
+    }
+    
+    if platform_choice not in platforms:
+        print(Fore.RED + "\n  [!] Invalid option.")
+        time.sleep(1.5)
+        return
+        
+    platform_key, display_name = platforms[platform_choice]
+    print(Fore.WHITE + f"\n  Downloading from {Fore.GREEN}{display_name}{Fore.WHITE}:")
+    target = prompt_input("Enter target username or profile URL")
+    if not target:
+        return
+        
+    username = parse_profile_url(target, platform_key)
+    if not username or username == "INVALID_URL":
+        username = target # Fallback if URL parsing is not perfectly matched
+        
+    # Now show the media choice menu!
+    selected_media_index = 0
+    while True:
+        draw_social_menu(selected_media_index)
+        key = get_key()
+        
+        if key == 'up':
+            selected_media_index = (selected_media_index - 1) % 8
+        elif key == 'down':
+            selected_media_index = (selected_media_index + 1) % 8
+        elif key == 'esc':
+            return
+        elif key in ['1', '2', '3', '4', '5', '6', '7', '8']:
+            selected_media_index = int(key) - 1
+            key = 'enter'
+            
+        if key == 'enter':
+            if selected_media_index == 7: # Back
+                return
+                
+            clear_screen()
+            media_choice = str(selected_media_index + 1)
+            draw_header(f"Running: Quick Download - Mode [{media_choice}]")
+            
+            print(Fore.GREEN + Style.BRIGHT + f"  === Quick Download: {username} ({display_name}) ===")
+            print(Fore.YELLOW + f"  [+] Downloading mode [{media_choice}]...")
+            print(Fore.LIGHTBLACK_EX + "  " + "─" * 50)
+            
+            try:
+                dest_dir = os.path.join(BASE, platform_key, username)
+                os.makedirs(dest_dir, exist_ok=True)
+                download_profile(username, dest_dir, platform_key, target, media_choice)
+            except KeyboardInterrupt:
+                print(Fore.YELLOW + "\n  [!] Download stopped by user.")
+            except Exception as e:
+                print(Fore.RED + f"\n  [!] Error: {e}")
+                
+            print(Fore.LIGHTBLACK_EX + "\n  " + "─" * 50)
+            print(Fore.GREEN + "  [+] Done.")
+            print()
+            input("  Press Enter to return to MINT Social Tool menu...")
+            break
+
 def draw_social_menu(selected_index):
     clear_screen()
     draw_header("Running: MINT Social Tool (Social Downloader)")
@@ -372,7 +537,7 @@ def draw_social_menu(selected_index):
         "Photos + Videos",
         "Stories + Highlights",
         "All",
-        "Back to Main Menu"
+        "Back to Menu"
     ]
     
     menu_width = 30
@@ -392,43 +557,68 @@ def draw_social_menu(selected_index):
 def run_social_tool_tui():
     selected_index = 0
     while True:
-        draw_social_menu(selected_index)
+        draw_social_main_menu(selected_index)
         key = get_key()
         
         if key == 'up':
-            selected_index = (selected_index - 1) % 8
+            selected_index = (selected_index - 1) % 4
         elif key == 'down':
-            selected_index = (selected_index + 1) % 8
+            selected_index = (selected_index + 1) % 4
         elif key == 'esc':
             break
-        elif key in ['1', '2', '3', '4', '5', '6', '7', '8']:
+        elif key in ['1', '2', '3', '4']:
             selected_index = int(key) - 1
             key = 'enter'
             
         if key == 'enter':
-            if selected_index == 7:
+            if selected_index == 3:  # Back to Main Menu
                 break
-            
-            clear_screen()
-            media_choice = str(selected_index + 1)
-            draw_header(f"Running: MINT Social Tool - Mode [{media_choice}]")
-            
-            print(Fore.GREEN + Style.BRIGHT + f"  === MINT Social Tool - Mode [{media_choice}] ===")
-            print()
-            print(Fore.YELLOW + f"  [+] Starting downloads in mode [{media_choice}]...")
-            print(Fore.LIGHTBLACK_EX + "  " + "─" * 50)
-            
-            try:
-                run_social_tool_downloads(media_choice)
-            except KeyboardInterrupt:
-                print(Fore.YELLOW + "\n  [!] Downloads interrupted by user.")
-            except Exception as e:
-                print(Fore.RED + f"\n  [!] Error running downloads: {e}")
-                
-            print(Fore.LIGHTBLACK_EX + "\n  " + "─" * 50)
-            print(Fore.GREEN + "  [+] Done.")
-            print()
-            input("  Press Enter to return to MINT Social Tool menu...")
+            elif selected_index == 0:  # Add a profile to lists
+                add_social_profile_interactive()
+            elif selected_index == 1:  # Download from a single profile directly
+                run_direct_profile_download()
+            elif selected_index == 2:  # Run batch downloads from lists
+                # Show the media type menu
+                selected_media_index = 0
+                while True:
+                    draw_social_menu(selected_media_index)
+                    key2 = get_key()
+                    
+                    if key2 == 'up':
+                        selected_media_index = (selected_media_index - 1) % 8
+                    elif key2 == 'down':
+                        selected_media_index = (selected_media_index + 1) % 8
+                    elif key2 == 'esc':
+                        break
+                    elif key2 in ['1', '2', '3', '4', '5', '6', '7', '8']:
+                        selected_media_index = int(key2) - 1
+                        key2 = 'enter'
+                        
+                    if key2 == 'enter':
+                        if selected_media_index == 7:  # Back
+                            break
+                            
+                        clear_screen()
+                        media_choice = str(selected_media_index + 1)
+                        draw_header(f"Running: MINT Social Tool - Mode [{media_choice}]")
+                        
+                        print(Fore.GREEN + Style.BRIGHT + f"  === MINT Social Tool - Mode [{media_choice}] ===")
+                        print()
+                        print(Fore.YELLOW + f"  [+] Starting downloads in mode [{media_choice}]...")
+                        print(Fore.LIGHTBLACK_EX + "  " + "─" * 50)
+                        
+                        try:
+                            run_social_tool_downloads(media_choice)
+                        except KeyboardInterrupt:
+                            print(Fore.YELLOW + "\n  [!] Downloads interrupted by user.")
+                        except Exception as e:
+                            print(Fore.RED + f"\n  [!] Error running downloads: {e}")
+                            
+                        print(Fore.LIGHTBLACK_EX + "\n  " + "─" * 50)
+                        print(Fore.GREEN + "  [+] Done.")
+                        print()
+                        input("  Press Enter to return to MINT Social Tool menu...")
+                        break
 
 def update_single_tool(key, name, path):
     if os.path.exists(os.path.join(path, ".git")):
