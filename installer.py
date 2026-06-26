@@ -451,8 +451,10 @@ def main():
     if launchers_success:
         print(Fore.WHITE + "  ❯ Save path configuration...".ljust(55), end="", flush=True)
         try:
-            mint_dir = os.path.dirname(os.path.abspath(__file__))
-            config_file_path = os.path.join(mint_dir, "config.json")
+            user_home = os.path.expanduser("~")
+            mint_home_dir = os.path.join(user_home, ".mint")
+            os.makedirs(mint_home_dir, exist_ok=True)
+            config_file_path = os.path.join(mint_home_dir, "config.json")
             with open(config_file_path, "w", encoding="utf-8") as f:
                 json.dump(config_data, f, indent=4)
             print(Fore.GREEN + Style.BRIGHT + "[ SUCCESS ]")

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mint-osint"
-version = "1.0.2"
+version = "1.0.3"
 description = "MINT — The Unified OSINT & Media Command Center"
 readme = "README.md"
 authors = [{ name = "sayfalse" }]
@@ -17,4 +17,4 @@ dependencies = [
 mint = "mint:main"
 
 [tool.setuptools]
-py-modules = ["mint"]
+py-modules = ["mint", "installer"]

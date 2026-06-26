@@ -31,10 +31,11 @@ OPTIONS = [
 ]
 
 # Constants and Paths for MINT Social Tool (dynamically resolved from config.json if available)
-config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+user_home = os.path.expanduser("~")
+mint_home_dir = os.path.join(user_home, ".mint")
+config_path = os.path.join(mint_home_dir, "config.json")
 
 # Dynamic defaults based on user's home directory (standard writeable location across Windows users)
-user_home = os.path.expanduser("~")
 BASE = os.path.join(user_home, "mint-social")
 COOKIES_DIR = os.path.join(BASE, "cookies")
 
@@ -535,10 +536,12 @@ def run_tools_update():
     print(Fore.GREEN + Style.BRIGHT + "  === Update OSINT Tools ===")
     print()
     
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    user_home = os.path.expanduser("~")
+    mint_home_dir = os.path.join(user_home, ".mint")
+    config_path = os.path.join(mint_home_dir, "config.json")
     if not os.path.exists(config_path):
         print(Fore.RED + "  [!] Configuration file (config.json) not found.")
-        print(Fore.YELLOW + "  [+] Please run setup.py/setup.bat first to configure and install the tools.")
+        print(Fore.YELLOW + "  [+] Please run the setup installer first to configure and install the tools.")
         print()
         input("  Press Enter to return to menu...")
         return
@@ -575,6 +578,66 @@ def run_tools_update():
     input("  Press Enter to return to menu...")
 
 def main():
+    # Check if MINT is configured. If not, automatically launch the interactive setup installer.
+    user_home = os.path.expanduser("~")
+    mint_home_dir = os.path.join(user_home, ".mint")
+    config_path = os.path.join(mint_home_dir, "config.json")
+    
+    if not os.path.exists(config_path):
+        clear_screen()
+        logo_lines = [
+            "              ▄              ",
+            "            ▄█▀█▄            ",
+            "           ▄██ ██▄           ",
+            "          ████ ████          ",
+            "         ▄████ ████▄         ",
+            "        ██████ ██████        ",
+            "         ▀████ ████▀         ",
+            "        ▄█████ █████▄        ",
+            "         ▀████ ████▀         ",
+            "           ▀██ ██▀           ",
+            "             █ █             ",
+            "             ▀ ▀             "
+        ]
+        for line in logo_lines:
+            print_centered(line, 26, Fore.GREEN)
+        print()
+        print_centered("M I N T   S E T U P", 19, Fore.GREEN + Style.BRIGHT)
+        print_centered("─" * 50, 50, Fore.LIGHTBLACK_EX)
+        print()
+        print(Fore.YELLOW + "  [!] MINT has not been configured yet, and the sub-tools are missing.")
+        print(Fore.WHITE + "  [+] The setup installer will download Sherlock, Holehe, Toutatis,")
+        print(Fore.WHITE + "      and SpiderFoot, and configure your directories automatically.")
+        print()
+        
+        try:
+            choice = input(Fore.GREEN + "  ❯ Would you like to run the interactive installer now? (y/n): " + Fore.WHITE).strip().lower()
+        except KeyboardInterrupt:
+            print(Fore.YELLOW + "\n\n  [!] Setup cancelled by user.")
+            sys.exit(0)
+            
+        if choice in ('y', 'yes'):
+            try:
+                import installer
+                installer.main()
+                if os.path.exists(config_path):
+                    # Successfully configured! Restart this script to boot directly into the main menu
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
+            except ImportError:
+                print(Fore.RED + "\n  [!] Error: The installer module (installer.py) was not found in your path.")
+                print(Fore.YELLOW + "  [+] Please run setup.bat or setup.sh manually to configure MINT.")
+                print()
+                input("  Press Enter to exit...")
+                sys.exit(1)
+            except Exception as e:
+                print(Fore.RED + f"\n  [!] Error running installer: {e}")
+                print()
+                input("  Press Enter to exit...")
+                sys.exit(1)
+        else:
+            print(Fore.YELLOW + "\n  [!] Setup skipped. MINT cannot run without configuration.")
+            sys.exit(0)
+
     if len(sys.argv) > 1:
         if sys.argv[1] == "--social":
             run_social_tool_tui()
