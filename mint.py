@@ -2,12 +2,19 @@ import os
 import sys
 import time
 import subprocess
-import msvcrt
 import json
 import shutil
 import urllib.request
 import zipfile
 import io
+
+try:
+    import msvcrt
+    is_windows = True
+except ImportError:
+    is_windows = False
+    import tty
+    import termios
 
 # Force UTF-8 encoding on Windows to prevent UnicodeEncodeErrors with box-drawing characters
 if sys.platform.startswith('win'):
@@ -35,6 +42,26 @@ user_home = os.path.expanduser("~")
 mint_home_dir = os.path.join(user_home, ".mint")
 config_path = os.path.join(mint_home_dir, "config.json")
 
+def resolve_portable_path(path):
+    if not path:
+        return path
+    if os.path.exists(path):
+        return path
+    norm_path = os.path.normpath(path)
+    parts = norm_path.split(os.sep)
+    current_home = os.path.expanduser("~")
+    if len(parts) > 2 and parts[0].upper() == "C:" and parts[1].lower() == "users":
+        subpath = os.path.join(*parts[3:]) if len(parts) > 3 else ""
+        new_path = os.path.join(current_home, subpath)
+        if os.path.exists(new_path):
+            return new_path
+    elif len(parts) > 2 and parts[1].lower() in ["home", "users"]:
+        subpath = os.path.join(*parts[3:]) if len(parts) > 3 else ""
+        new_path = os.path.join(current_home, subpath)
+        if os.path.exists(new_path):
+            return new_path
+    return path
+
 # Dynamic defaults based on user's home directory (standard writeable location across Windows users)
 BASE = os.path.join(user_home, "mint-social")
 COOKIES_DIR = os.path.join(BASE, "cookies")
@@ -44,7 +71,7 @@ if os.path.exists(config_path):
         with open(config_path, "r", encoding="utf-8") as f:
             config_data = json.load(f)
             if "social_dir" in config_data:
-                BASE = config_data["social_dir"]
+                BASE = resolve_portable_path(config_data["social_dir"])
                 COOKIES_DIR = os.path.join(BASE, "cookies")
     except:
         pass
@@ -154,20 +181,47 @@ def draw_menu(selected_index):
     print()
 
 def get_key():
-    ch = msvcrt.getch()
-    if ch in (b'\x00', b'\xe0'):
+    if is_windows:
         ch = msvcrt.getch()
-        if ch == b'H': return 'up'
-        if ch == b'P': return 'down'
-    elif ch == b'\r':
-        return 'enter'
-    elif ch == b'\x1b':
-        return 'esc'
+        if ch in (b'\x00', b'\xe0'):
+            ch = msvcrt.getch()
+            if ch == b'H': return 'up'
+            if ch == b'P': return 'down'
+        elif ch == b'\r':
+            return 'enter'
+        elif ch == b'\x1b':
+            return 'esc'
+        else:
+            try:
+                return ch.decode('utf-8')
+            except:
+                return None
     else:
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
         try:
-            return ch.decode('utf-8')
-        except:
-            return None
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+            if ch == '\x1b':
+                import select
+                rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+                if rlist:
+                    ch2 = sys.stdin.read(1)
+                    if ch2 == '[':
+                        rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+                        if rlist:
+                            ch3 = sys.stdin.read(1)
+                            if ch3 == 'A': return 'up'
+                            if ch3 == 'B': return 'down'
+                return 'esc'
+            elif ch == '\r' or ch == '\n':
+                return 'enter'
+            elif ch == '\x03': # Ctrl+C
+                raise KeyboardInterrupt
+            else:
+                return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 def prompt_input(label):
     print(Fore.GREEN + f"  ❯ {label}: " + Fore.WHITE, end="")
@@ -787,14 +841,16 @@ def update_single_tool(key, name, path):
             return
             
         zip_url = f"https://github.com/{repo}/archive/refs/heads/master.zip"
+        import ssl
+        context = ssl.create_default_context()
         try:
             req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with urllib.request.urlopen(req, timeout=15, context=context) as response:
                 zip_data = response.read()
         except:
             zip_url = f"https://github.com/{repo}/archive/refs/heads/main.zip"
             req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with urllib.request.urlopen(req, timeout=15, context=context) as response:
                 zip_data = response.read()
                 
         temp_dir = os.path.join(os.path.dirname(path), f"{key}_temp_update")
@@ -872,10 +928,10 @@ def run_tools_update():
         return
         
     tools = {
-        "sherlock": ("Sherlock", config.get("sherlock_path")),
-        "holehe": ("Holehe", config.get("holehe_path")),
-        "spiderfoot": ("SpiderFoot", config.get("spiderfoot_path")),
-        "toutatis": ("Toutatis", config.get("toutatis_path"))
+        "sherlock": ("Sherlock", resolve_portable_path(config.get("sherlock_path"))),
+        "holehe": ("Holehe", resolve_portable_path(config.get("holehe_path"))),
+        "spiderfoot": ("SpiderFoot", resolve_portable_path(config.get("spiderfoot_path"))),
+        "toutatis": ("Toutatis", resolve_portable_path(config.get("toutatis_path")))
     }
     
     print(Fore.YELLOW + "  [+] Checking for updates from official GitHub repositories...\n")

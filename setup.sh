@@ -21,18 +21,15 @@ else
     # If run via curl | bash, clone the repo to a temporary folder and run setup
     echo "  ❯ Cloning MINT repository..."
     TEMP_DIR=$(mktemp -d)
+    trap 'rm -rf "$TEMP_DIR"' EXIT
     if command -v git &> /dev/null; then
         git clone https://github.com/sayfalse/mint.git "$TEMP_DIR"
     else
         echo "Error: Git is required for the automated curl installer."
         echo "Please install Git or manually download the repository."
-        rm -rf "$TEMP_DIR"
         exit 1
     fi
     
     cd "$TEMP_DIR" || exit 1
     python3 installer.py
-    
-    # Clean up the temporary clone after setup completes
-    rm -rf "$TEMP_DIR"
 fi

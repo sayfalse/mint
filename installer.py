@@ -169,8 +169,10 @@ def install_tool_from_github(key, info, target_dir, has_git):
                 import io
                 import shutil
                 
+                import ssl
                 req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=15) as response:
+                context = ssl.create_default_context()
+                with urllib.request.urlopen(req, timeout=15, context=context) as response:
                     zip_data = response.read()
                 
                 with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
@@ -370,7 +372,12 @@ def main():
     print(Fore.WHITE + "  ❯ Creating MINT Social folders...".ljust(55), end="", flush=True)
     try:
         os.makedirs(social_dir, exist_ok=True)
-        os.makedirs(os.path.join(social_dir, "cookies"), exist_ok=True)
+        cookie_dir = os.path.join(social_dir, "cookies")
+        os.makedirs(cookie_dir, exist_ok=True)
+        try:
+            os.chmod(cookie_dir, 0o700) # Secure directory permissions (owner only)
+        except:
+            pass
         os.makedirs(tools_dir, exist_ok=True)
         
         # Create platforms subdirectories
@@ -392,7 +399,6 @@ def main():
                     f.write(f"# Example: https://www.{pf.split('_')[0]}.com/target_username\n\n")
                     
         # Create empty cookie files with helpful comments
-        cookie_dir = os.path.join(social_dir, "cookies")
         cookie_files = ["facebook.com_cookies.txt", "instagram.com_cookies.txt", "tiktok.com_cookies.txt", "x.com_cookies.txt"]
         for cf in cookie_files:
             cf_path = os.path.join(cookie_dir, cf)
@@ -402,6 +408,10 @@ def main():
                     f.write("# Netscape HTTP Cookie File\n")
                     f.write(f"# MINT Social Tool - {c_name} Cookies File\n")
                     f.write("# Paste your exported cookies for this platform here in Netscape format.\n\n")
+                try:
+                    os.chmod(cf_path, 0o600) # Secure file permissions (owner only)
+                except:
+                    pass
                     
         print(Fore.GREEN + Style.BRIGHT + "[ SUCCESS ]")
     except Exception as e:
