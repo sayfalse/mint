@@ -15,7 +15,7 @@
       rec {
         packages.default = python.pkgs.buildPythonApplication {
           pname = "mint-osint";
-          version = "1.0.10";
+          version = "1.1.0";
           src = ./.;
 
           propagatedBuildInputs = [

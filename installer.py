@@ -92,6 +92,13 @@ GIT_REPOS = {
         "folder": "toutatis",
         "launcher": "toutatis",
         "zip_url": "https://github.com/megadose/toutatis/archive/refs/heads/master.zip"
+    },
+    "yesitsme": {
+        "name": "yesitsme (Instagram Finder)",
+        "repo": "https://github.com/0x0be/yesitsme.git",
+        "folder": "yesitsme",
+        "launcher": "yesitsme",
+        "zip_url": "https://github.com/0x0be/yesitsme/archive/refs/heads/main.zip"
     }
 }
 
@@ -351,6 +358,10 @@ def write_launchers(config_data):
             # Toutatis
             with open(os.path.join(scripts_dir, "toutatis.bat"), "w", encoding="utf-8") as f:
                 f.write(f'@echo off\npushd "{config_data["toutatis_path"]}"\n"{sys.executable}" -m toutatis %*\npopd\n')
+            # NEW: yesitsme launcher (Windows)
+            yesitsme_py = os.path.join(config_data["yesitsme_path"], "yesitsme.py")
+            with open(os.path.join(scripts_dir, "yesitsme.bat"), "w", encoding="utf-8") as f:
+                f.write(f'@echo off\npushd "{config_data["yesitsme_path"]}"\n"{sys.executable}" "{yesitsme_py}" %*\npopd\n')
         else:
             # Unix launchers
             # Sherlock
@@ -377,6 +388,12 @@ def write_launchers(config_data):
             with open(sh_toutatis, "w", encoding="utf-8") as f:
                 f.write(f'#!/bin/sh\ncd "{config_data["toutatis_path"]}"\nexec "{sys.executable}" -m toutatis "$@"\n')
             os.chmod(sh_toutatis, 0o755)
+            # NEW: yesitsme launcher (Unix)
+            yesitsme_py = os.path.join(config_data["yesitsme_path"], "yesitsme.py")
+            sh_yesitsme = os.path.join(scripts_dir, "yesitsme")
+            with open(sh_yesitsme, "w", encoding="utf-8") as f:
+                f.write(f'#!/bin/sh\ncd "{config_data["yesitsme_path"]}"\nexec "{sys.executable}" "{yesitsme_py}" "$@"\n')
+            os.chmod(sh_yesitsme, 0o755)
             
         print(Fore.GREEN + Style.BRIGHT + "[ SUCCESS ]")
         return True

@@ -67,7 +67,8 @@ OPTIONS = [
     {"name": "SpiderFoot (OSINT Web Server)", "desc": "Automates intelligence gathering via a local web interface"},
     {"name": "Toutatis (Instagram Extractor)", "desc": "Extracts associated emails and phone numbers from Instagram profiles"},
     {"name": "MINT Social Tool (Social Downloader)", "desc": "Downloads photos, videos, stories, and highlights from profiles"},
-    {"name": "Update Tools (GitHub Pull)", "desc": "Pull the latest updates for all 4 external OSINT tools from their official repositories"},
+    {"name": "yesitsme (Instagram Finder)", "desc": "Finds Instagram profiles by target name, email, and phone number"},
+    {"name": "Update Tools (GitHub Pull)", "desc": "Pull the latest updates for all 5 external OSINT tools from their official repositories"},
     {"name": "Exit", "desc": "Close the MINT Command Center"}
 ]
 
@@ -185,7 +186,7 @@ def draw_header(subtitle="Select a tool to launch from the menu below:"):
     try:
         version = importlib.metadata.version("mint-osint")
     except importlib.metadata.PackageNotFoundError:
-        version = "1.0.9-dev"
+        version = "1.1.0-dev"
         
     print_centered(f"M I N T   v{version}", 10 + len(version), Fore.GREEN + Style.BRIGHT)
     print_centered("─" * 50, 50, Fore.LIGHTBLACK_EX)
@@ -950,7 +951,8 @@ def update_single_tool(key, name, path):
             "sherlock": "sherlock-project/sherlock",
             "holehe": "megadose/holehe",
             "spiderfoot": "smicallef/spiderfoot",
-            "toutatis": "megadose/toutatis"
+            "toutatis": "megadose/toutatis",
+            "yesitsme": "0x0be/yesitsme"
         }
         
         repo = repos.get(key)
@@ -1035,7 +1037,8 @@ def run_tools_update():
         "sherlock": ("Sherlock", resolve_portable_path(config.get("sherlock_path"))),
         "holehe": ("Holehe", resolve_portable_path(config.get("holehe_path"))),
         "spiderfoot": ("SpiderFoot", resolve_portable_path(config.get("spiderfoot_path"))),
-        "toutatis": ("Toutatis", resolve_portable_path(config.get("toutatis_path")))
+        "toutatis": ("Toutatis", resolve_portable_path(config.get("toutatis_path"))),
+        "yesitsme": ("yesitsme", resolve_portable_path(config.get("yesitsme_path")))
     }
     
     print(Fore.YELLOW + "  [+] Checking for updates from official GitHub repositories...\n")
@@ -1134,7 +1137,7 @@ def main():
             selected_index = (selected_index + 1) % len(OPTIONS)
         elif key == 'esc':
             break
-        elif key in ['1', '2', '3', '4', '5', '6', '7']:
+        elif key in ['1', '2', '3', '4', '5', '6', '7', '8']:
             idx = int(key) - 1
             selected_index = idx
             key = 'enter'
@@ -1268,10 +1271,102 @@ def main():
             elif selected_index == 4:  # MINT Social Tool (Social Downloader)
                 run_social_tool_tui()
                 
-            elif selected_index == 5:  # Update Tools
+            elif selected_index == 5:  # yesitsme (Instagram Finder)
+                draw_header("Running: yesitsme (Instagram Finder)")
+                print(Fore.GREEN + Style.BRIGHT + "  === yesitsme (Instagram Finder) ===")
+                print()
+                print(Fore.WHITE + "  Find an Instagram profile by name + email/phone.")
+                print(Fore.LIGHTBLACK_EX + "  All fields except session ID are required.")
+                print()
+                
+                sessionid = prompt_input("Enter YOUR Instagram Session ID (required)")
+                if not sessionid:
+                    continue
+                if not re.match(r'^[a-zA-Z0-9:_]+$', sessionid):
+                    print(Fore.RED + "\n  [!] Invalid Session ID format.")
+                    print(Fore.YELLOW + "  [+] Must contain only letters, numbers, colons, underscores.")
+                    time.sleep(3)
+                    continue
+                    
+                name = prompt_input("Enter target full name (e.g. 'John Doe')")
+                if not name:
+                    continue
+                # Allow letters, spaces, hyphens, apostrophes, dots
+                if not re.match(r"^[a-zA-Z\s\-'.]+$", name):
+                    print(Fore.RED + "\n  [!] Invalid name format.")
+                    time.sleep(3)
+                    continue
+                    
+                email = prompt_input("Enter target email (or space to skip)")
+                if not email:
+                    email = " "
+                # Permissive: yesitsme accepts obfuscated forms like "j*****e@gmail.com"
+                if email.strip() and not re.match(r"^[a-zA-Z0-9\s@.*+\-]+$", email):
+                    print(Fore.RED + "\n  [!] Invalid email format.")
+                    time.sleep(3)
+                    continue
+                    
+                phone = prompt_input("Enter target phone (e.g. '+39 *** *** **09', or space to skip)")
+                if not phone:
+                    phone = " "
+                # Allow +, digits, spaces, asterisks, hyphens
+                if phone.strip() and not re.match(r"^[+0-9\s\-*]+$", phone):
+                    print(Fore.RED + "\n  [!] Invalid phone format.")
+                    time.sleep(3)
+                    continue
+                    
+                timeout = prompt_input("Timeout between requests in seconds (default 10)")
+                if not timeout:
+                    timeout = "10"
+                if not timeout.isdigit():
+                    print(Fore.RED + "\n  [!] Timeout must be a number.")
+                    time.sleep(3)
+                    continue
+                    
+                # SEC-06 pattern: pass session ID via env var + 0600 temp file
+                # (copied from the toutatis handler - do NOT pass as raw argv)
+                env = os.environ.copy()
+                cmd = ["yesitsme", "-n", name, "-e", email, "-p", phone, "-t", timeout]
+                session_file = None
+                env["YESITSME_SESSION_ID"] = sessionid
+                try:
+                    import tempfile
+                    tf = tempfile.NamedTemporaryFile(
+                        mode='w', suffix='.sid', delete=False, prefix='mint_yesitsme_'
+                    )
+                    tf.write(sessionid)
+                    tf.close()
+                    try:
+                        os.chmod(tf.name, 0o600)
+                    except:
+                        pass
+                    cmd.extend(["-s", f"@{tf.name}"])
+                    session_file = tf.name
+                except Exception as e:
+                    print(Fore.RED + f"  [!] Failed to create secure session file: {e}")
+                    # Fallback: pass directly (less secure but functional)
+                    cmd.extend(["-s", sessionid])
+                    
+                print(Fore.YELLOW + f"\n  [+] Querying Instagram for '{name}'...\n")
+                try:
+                    subprocess.run(cmd, shell=False, env=env)
+                except KeyboardInterrupt:
+                    print(Fore.YELLOW + "\n  [!] Process stopped by user.")
+                except Exception as e:
+                    print(Fore.RED + f"\n  [!] Error executing command: {e}")
+                finally:
+                    if session_file and os.path.exists(session_file):
+                        try:
+                            os.unlink(session_file)
+                        except:
+                            pass
+                print()
+                input("  Press Enter to return to menu...")
+                
+            elif selected_index == 6:  # Update Tools (shifted from 5)
                 run_tools_update()
                 
-            elif selected_index == 6:  # Exit
+            elif selected_index == 7:  # Exit (shifted from 6)
                 break
 
     clear_screen()

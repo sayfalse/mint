@@ -1,6 +1,6 @@
 # Maintainer: sayfalse <sayfalse@users.noreply.github.com>
 pkgname=mint-osint-bin
-pkgver=1.0.10
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="MINT — The Unified OSINT & Media Command Center"
 arch=('any')
