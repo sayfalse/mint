@@ -10,7 +10,7 @@ $toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
 # NEW: SHA-256 checksum verification
 # Computed via: ./scripts/compute-checksums.sh 1.1.0 zip
 # IMPORTANT: update this hash at every release.
-$expectedChecksum = '3edb0f93ace2c24599b0a494fef02a151613e6c5269499344e9b06e93b587e25'
+$expectedChecksum = '03a503b7172792e4d2eed5d9d18f4d99ac921169ec6063305a632ac169fad8c2'
 
 $packageArgs = @{
   packageName   = $packageName
