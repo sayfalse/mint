@@ -11,7 +11,7 @@ makedepends=('git')
 provides=('mint-osint')
 conflicts=('mint-osint')
 source=("https://github.com/sayfalse/mint/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('00af28fda2f67d1621aca3e6bfd9a22cf133a6f85266f02752401bdea7d27d39')
+sha256sums=('2d4d547a895910c823b5c7f213de01483747af37c6d1505156e71b04db93101c')
 
 package() {
   cd "${srcdir}/mint-${pkgver}"
