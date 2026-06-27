@@ -11,12 +11,44 @@ if sys.platform.startswith('win'):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-# 1. Determine pip install command arguments (PEP 668 bypass for Python 3.11+)
-PIP_INSTALL = [sys.executable, "-m", "pip", "install"]
-if sys.version_info >= (3, 11):
-    PIP_INSTALL.append("--break-system-packages")
+# 1. Determine pip install command arguments (PEP 668 compliance)
+def get_pip_install_cmd():
+    cmd = [sys.executable, "-m", "pip", "install"]
+    in_venv = (
+        hasattr(sys, 'base_prefix') and sys.prefix != sys.base_prefix
+    ) or 'VIRTUAL_ENV' in os.environ
+    if in_venv:
+        return cmd
+    is_termux = "TERMUX_VERSION" in os.environ or "com.termux" in sys.executable
+    if is_termux:
+        if sys.version_info >= (3, 11):
+            cmd.append("--break-system-packages")
+        return cmd
+    import sysconfig
+    marker_path = os.path.join(sysconfig.get_path('stdlib'), 'EXTERNALLY-MANAGED')
+    if os.path.exists(marker_path):
+        print("  \033[93m[!] System Python is externally managed (PEP 668).\033[0m")
+        print("  [+] Please create a virtual environment first:")
+        print("      python3 -m venv ~/.venvs/mint && source ~/.venvs/mint/bin/activate")
+        print("  [+] Then, re-run the MINT installer.")
+        sys.exit(1)
+    return cmd
 
-# 1.1 Auto-install colorama if not present
+PIP_INSTALL = get_pip_install_cmd()
+
+# 1.1 Add Zip-Slip path containment validator
+def safe_extractall(zip_ref, target_dir):
+    target_dir = os.path.abspath(target_dir)
+    for member in zip_ref.namelist():
+        member_path = os.path.abspath(os.path.join(target_dir, member))
+        if os.path.commonpath([target_dir, member_path]) != target_dir:
+            raise ValueError(
+                f"Zip-Slip detected: refusing to extract '{member}' "
+                f"(resolves to {member_path}, outside {target_dir})"
+            )
+    zip_ref.extractall(target_dir)
+
+# 1.2 Auto-install colorama if not present
 try:
     from colorama import init, Fore, Back, Style
 except ImportError:
@@ -173,34 +205,52 @@ def install_tool_from_github(key, info, target_dir, has_git):
                 import zipfile
                 import io
                 import shutil
-                
                 import ssl
-                req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
+                import tempfile
+                
+                repo_name = info["repo"].replace("https://github.com/", "").replace(".git", "")
+                zip_urls_to_try = [
+                    f"https://github.com/{repo_name}/archive/refs/heads/master.zip",
+                    f"https://github.com/{repo_name}/archive/refs/heads/main.zip",
+                ]
+                
+                zip_data = None
+                last_err = None
                 context = ssl.create_default_context()
-                with urllib.request.urlopen(req, timeout=15, context=context) as response:
-                    zip_data = response.read()
+                for url in zip_urls_to_try:
+                    try:
+                        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(req, timeout=15, context=context) as response:
+                            zip_data = response.read()
+                        break
+                    except Exception as e:
+                        last_err = e
+                        
+                if zip_data is None:
+                    print(Fore.RED + Style.BRIGHT + "[ FAILED  ]")
+                    print(Fore.RED + f"    Could not download {key} archive: {last_err}")
+                    return False, None
                 
                 with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
-                    temp_extract_dir = os.path.join(target_dir, f"{key}_temp_setup")
-                    if os.path.exists(temp_extract_dir):
-                        shutil.rmtree(temp_extract_dir)
-                    os.makedirs(temp_extract_dir, exist_ok=True)
-                    
-                    zip_ref.extractall(temp_extract_dir)
-                    
-                    extracted_folder = None
-                    for item in os.listdir(temp_extract_dir):
-                        item_path = os.path.join(temp_extract_dir, item)
-                        if os.path.isdir(item_path):
-                            extracted_folder = item_path
-                            break
-                    
-                    if extracted_folder:
-                        os.rename(extracted_folder, tool_path)
-                    
-                    if os.path.exists(temp_extract_dir):
-                        shutil.rmtree(temp_extract_dir)
+                    # TOCTOU fix: Use tempfile.mkdtemp for atomic temp dir
+                    temp_extract_dir = tempfile.mkdtemp(prefix=f"{key}_temp_setup_", dir=target_dir)
+                    try:
+                        # Zip-Slip fix: Use safe_extractall
+                        safe_extractall(zip_ref, temp_extract_dir)
                         
+                        extracted_folder = None
+                        for item in os.listdir(temp_extract_dir):
+                            item_path = os.path.join(temp_extract_dir, item)
+                            if os.path.isdir(item_path):
+                                extracted_folder = item_path
+                                break
+                        
+                        if extracted_folder:
+                            os.rename(extracted_folder, tool_path)
+                    finally:
+                        if os.path.exists(temp_extract_dir):
+                            shutil.rmtree(temp_extract_dir)
+                            
         # 2. Install requirements or setup package
         req_file = os.path.join(tool_path, "requirements.txt")
         setup_py = os.path.join(tool_path, "setup.py")
@@ -214,6 +264,7 @@ def install_tool_from_github(key, info, target_dir, has_git):
                         content = f.read()
                     new_content = re.sub(r'lxml\s*>=\s*4\.9\.2\s*,\s*<\s*5', 'lxml>=4.9.2', content)
                     if new_content != content:
+                        print(Fore.YELLOW + "    [!] Note: Patching SpiderFoot requirements.txt for lxml 5.x compatibility.")
                         with open(req_file, "w", encoding="utf-8") as f:
                             f.write(new_content)
                 except Exception as e:
@@ -414,18 +465,60 @@ def main():
     
     # Create Directories
     print(Fore.WHITE + "  ❯ Creating MINT Social folders...".ljust(55), end="", flush=True)
+    
+    def secure_cookie_dir(path):
+        if sys.platform.startswith('win'):
+            try:
+                user = os.environ.get('USERNAME') or os.environ.get('USER')
+                if user:
+                    subprocess.run(
+                        ['icacls', path, '/inheritance:r', '/grant:r', f'{user}:(OI)(CI)(F)'],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+            except:
+                pass
+        else:
+            try:
+                os.chmod(path, 0o700)
+            except:
+                pass
+
+    def secure_cookie_file(path):
+        if sys.platform.startswith('win'):
+            try:
+                user = os.environ.get('USERNAME') or os.environ.get('USER')
+                if user:
+                    subprocess.run(
+                        ['icacls', path, '/inheritance:r', '/grant:r', f'{user}:(F)'],
+                        check=True,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+                    subprocess.run(
+                        ['cipher', '/e', path],
+                        check=False,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL
+                    )
+            except:
+                pass
+        else:
+            try:
+                os.chmod(path, 0o600)
+            except:
+                pass
+
     try:
         os.makedirs(social_dir, exist_ok=True)
         cookie_dir = os.path.join(social_dir, "cookies")
         os.makedirs(cookie_dir, exist_ok=True)
-        try:
-            os.chmod(cookie_dir, 0o700) # Secure directory permissions (owner only)
-        except:
-            pass
+        secure_cookie_dir(cookie_dir)
         os.makedirs(tools_dir, exist_ok=True)
         
-        # Create platforms subdirectories
-        platforms = ["Facebook", "Instagram", "TikTok", "X", "Telegram"]
+        # Create platforms subdirectories (lowercase to match mint.py Social Downloader, Telegram removed)
+        platforms = ["facebook", "instagram", "tiktok", "x"]
         for p in platforms:
             os.makedirs(os.path.join(social_dir, p), exist_ok=True)
             
@@ -452,10 +545,7 @@ def main():
                     f.write("# Netscape HTTP Cookie File\n")
                     f.write(f"# MINT Social Tool - {c_name} Cookies File\n")
                     f.write("# Paste your exported cookies for this platform here in Netscape format.\n\n")
-                try:
-                    os.chmod(cf_path, 0o600) # Secure file permissions (owner only)
-                except:
-                    pass
+                secure_cookie_file(cf_path)
                     
         print(Fore.GREEN + Style.BRIGHT + "[ SUCCESS ]")
     except Exception as e:

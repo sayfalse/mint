@@ -27,6 +27,40 @@ from colorama import init, Fore, Back, Style
 # Initialize colorama
 init(autoreset=True)
 
+# 1. Determine pip install command arguments (PEP 668 compliance)
+def get_pip_install_cmd():
+    cmd = [sys.executable, "-m", "pip", "install"]
+    in_venv = (
+        hasattr(sys, 'base_prefix') and sys.prefix != sys.base_prefix
+    ) or 'VIRTUAL_ENV' in os.environ
+    if in_venv:
+        return cmd
+    is_termux = "TERMUX_VERSION" in os.environ or "com.termux" in sys.executable
+    if is_termux:
+        if sys.version_info >= (3, 11):
+            cmd.append("--break-system-packages")
+        return cmd
+    import sysconfig
+    marker_path = os.path.join(sysconfig.get_path('stdlib'), 'EXTERNALLY-MANAGED')
+    if os.path.exists(marker_path):
+        print(Fore.YELLOW + "  [!] System Python is externally managed (PEP 668).")
+        print(Fore.WHITE + "  [+] Please run MINT inside a virtual environment first:")
+        print("      python3 -m venv ~/.venvs/mint && source ~/.venvs/mint/bin/activate")
+        raise Exception("System Python is externally managed. Use a virtual environment.")
+    return cmd
+
+# 1.1 Add Zip-Slip path containment validator
+def safe_extractall(zip_ref, target_dir):
+    target_dir = os.path.abspath(target_dir)
+    for member in zip_ref.namelist():
+        member_path = os.path.abspath(os.path.join(target_dir, member))
+        if os.path.commonpath([target_dir, member_path]) != target_dir:
+            raise ValueError(
+                f"Zip-Slip detected: refusing to extract '{member}' "
+                f"(resolves to {member_path}, outside {target_dir})"
+            )
+    zip_ref.extractall(target_dir)
+
 OPTIONS = [
     {"name": "Sherlock (Username Scanner)", "desc": "Hunts down social media accounts by username across 300+ sites"},
     {"name": "Holehe (Email Checker)", "desc": "Checks if an email address is registered on 120+ different websites"},
@@ -73,12 +107,21 @@ if os.path.exists(config_path):
             if "social_dir" in config_data:
                 BASE = resolve_portable_path(config_data["social_dir"])
                 COOKIES_DIR = os.path.join(BASE, "cookies")
-    except:
-        pass
+    except json.JSONDecodeError as e:
+        print(f"  [!] Warning: config.json is corrupt ({e}). Falling back to default social directory.", file=sys.stderr)
+    except OSError as e:
+        print(f"  [!] Warning: Cannot read config.json ({e}). Falling back to default social directory.", file=sys.stderr)
 
 BROWSER = "chrome"
 PYTHON = sys.executable
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+import platform
+_UA_BY_PLATFORM = {
+    'Windows': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    'Darwin': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    'Linux': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
+UA = _UA_BY_PLATFORM.get(platform.system(), _UA_BY_PLATFORM['Linux'])
 
 PHOTO_FILTER = "extension in ('jpg','jpeg','png','gif','webp','bmp','jfif','heic','avif','tiff','svg')"
 VIDEO_FILTER = "extension in ('mp4','webm','mkv','mov','avi','m4v','flv','wmv','3gp','mpeg','mpg','ts','f4v','mts','m2ts')"
@@ -137,13 +180,23 @@ def draw_header(subtitle="Select a tool to launch from the menu below:"):
     for line in logo_lines:
         print_centered(line, 26, Fore.GREEN)
         
-    print()
-    print_centered("M I N T   v1.0", 14, Fore.GREEN + Style.BRIGHT)
+    import importlib.metadata
+    import platform
+    try:
+        version = importlib.metadata.version("mint-osint")
+    except importlib.metadata.PackageNotFoundError:
+        version = "1.0.9-dev"
+        
+    print_centered(f"M I N T   v{version}", 10 + len(version), Fore.GREEN + Style.BRIGHT)
     print_centered("─" * 50, 50, Fore.LIGHTBLACK_EX)
     print_centered("The Unified OSINT & Media Command Center", 40, Fore.WHITE + Style.BRIGHT)
     print_centered(f"Workspace: {current_workspace}", len(f"Workspace: {current_workspace}"), Fore.LIGHTBLACK_EX)
     print_centered(Fore.LIGHTBLACK_EX + "GitHub: " + Fore.BLUE + "https://github.com/sayfalse", 36)
-    print_centered("Environment: Windows  •  Python: 3.14", 37, Fore.LIGHTBLACK_EX)
+    
+    sys_name = "Android (Termux)" if "TERMUX_VERSION" in os.environ or "com.termux" in sys.executable else platform.system()
+    py_version = platform.python_version()
+    env_str = f"Environment: {sys_name}  •  Python: {py_version}"
+    print_centered(env_str, len(env_str), Fore.LIGHTBLACK_EX)
     print()
     print_centered(subtitle, len(subtitle), Fore.WHITE)
     print()
@@ -228,9 +281,12 @@ def prompt_input(label):
     sys.stdout.flush()
     return input().strip()
 
-def run_command(cmd_string):
+def run_command(argv):
+    import shlex
+    if isinstance(argv, str):
+        argv = shlex.split(argv)
     try:
-        subprocess.run(cmd_string, shell=True)
+        subprocess.run(argv, shell=False)
     except KeyboardInterrupt:
         print(Fore.YELLOW + "\n  [!] Process stopped by user.")
     except Exception as e:
@@ -297,7 +353,7 @@ def parse_profile_url(url, platform):
 
 def get_cookies_arg(platform):
     if platform == "tiktok":
-        return f"--cookies-from-browser {BROWSER}"
+        return ["--cookies-from-browser", BROWSER]
         
     possible_dirs = [d for d in [COOKIES_DIR, BASE] if d and os.path.exists(d)]
     possible_names = [
@@ -309,9 +365,9 @@ def get_cookies_arg(platform):
     possible_paths = [os.path.join(d, name) for d in possible_dirs for name in possible_names]
     for path in possible_paths:
         if os.path.exists(path):
-            return f'--cookies "{path}"'
+            return ["--cookies", path]
             
-    return ""
+    return []
 
 def check_archive(directory, archive_path):
     if not os.path.exists(directory):
@@ -350,13 +406,35 @@ def check_archive(directory, archive_path):
 def run_gallery_dl(gdir, gfil, gck, gurl):
     os.makedirs(gdir, exist_ok=True)
     archive_path = os.path.join(gdir, "archive.txt")
-    cmd = f'"{PYTHON}" -m gallery_dl -D "{gdir}" --filter "{gfil}" {gck} -o "user-agent={UA}" --download-archive "{archive_path}" --sleep-request 5 "{gurl}"'
-    return subprocess.run(cmd, shell=True).returncode
+    cmd = [
+        PYTHON, "-m", "gallery_dl",
+        "-D", gdir,
+        "--filter", gfil
+    ]
+    if gck:
+        cmd.extend(gck)
+    cmd.extend([
+        "-o", f"user-agent={UA}",
+        "--download-archive", archive_path,
+        "--sleep-request", "5",
+        gurl
+    ])
+    return subprocess.run(cmd, shell=False).returncode
 
 def run_yt_dlp(ydir, yck, yurl):
     os.makedirs(ydir, exist_ok=True)
-    cmd = f'"{PYTHON}" -m yt_dlp -o "{ydir}\\%(title)s.%(ext)s" {yck} --no-playlist --user-agent "{UA}" "{yurl}"'
-    return subprocess.run(cmd, shell=True).returncode
+    cmd = [
+        PYTHON, "-m", "yt_dlp",
+        "-o", os.path.join(ydir, "%(title)s.%(ext)s")
+    ]
+    if yck:
+        cmd.extend(yck)
+    cmd.extend([
+        "--no-playlist",
+        "--user-agent", UA,
+        yurl
+    ])
+    return subprocess.run(cmd, shell=False).returncode
 
 def download_photos(dest_dir, cookies_arg, url):
     check_archive(os.path.join(dest_dir, "Photos"), os.path.join(dest_dir, "Photos", "archive.txt"))
@@ -447,6 +525,11 @@ def run_social_tool_downloads(media_choice):
                 if not line:
                     continue
                 if line.startswith("#") or line.startswith(";"):
+                    continue
+                    
+                # SEC-01 fix: validate every profile URL/username read from file
+                if not is_safe_url(line) and not is_safe_username(line):
+                    print(Fore.RED + f"  [!] Skipping unsafe profile entry: {line[:60]}")
                     continue
                     
                 username = parse_profile_url(line, platform)
@@ -802,9 +885,11 @@ def run_social_tool_tui():
 
 def update_single_tool(key, name, path):
     def run_pip_install():
-        pip_install = [sys.executable, "-m", "pip", "install"]
-        if sys.version_info >= (3, 11):
-            pip_install.append("--break-system-packages")
+        try:
+            pip_install = get_pip_install_cmd()
+        except Exception as e:
+            print(Fore.RED + f"    [!] Environment Error: {e}")
+            raise Exception("PEP 668 compliance check failed.")
 
         req_file = os.path.join(path, "requirements.txt")
         setup_py = os.path.join(path, "setup.py")
@@ -818,6 +903,7 @@ def update_single_tool(key, name, path):
                         content = f.read()
                     new_content = re.sub(r'lxml\s*>=\s*4\.9\.2\s*,\s*<\s*5', 'lxml>=4.9.2', content)
                     if new_content != content:
+                        print(Fore.YELLOW + "    [!] Note: Patching SpiderFoot requirements.txt for lxml 5.x compatibility.")
                         with open(req_file, "w", encoding="utf-8") as f:
                             f.write(new_content)
                 except Exception as e:
@@ -862,7 +948,7 @@ def update_single_tool(key, name, path):
             "sherlock": "sherlock-project/sherlock",
             "holehe": "megadose/holehe",
             "spiderfoot": "smicallef/spiderfoot",
-            "toutatis": "leogout/toutatis"
+            "toutatis": "megadose/toutatis"
         }
         
         repo = repos.get(key)
@@ -871,6 +957,7 @@ def update_single_tool(key, name, path):
             
         zip_url = f"https://github.com/{repo}/archive/refs/heads/master.zip"
         import ssl
+        import tempfile
         context = ssl.create_default_context()
         try:
             req = urllib.request.Request(zip_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -882,38 +969,37 @@ def update_single_tool(key, name, path):
             with urllib.request.urlopen(req, timeout=15, context=context) as response:
                 zip_data = response.read()
                 
-        temp_dir = os.path.join(os.path.dirname(path), f"{key}_temp_update")
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
-            zip_ref.extractall(temp_dir)
-            
-        extracted_folder = None
-        for folder in os.listdir(temp_dir):
-            if folder.startswith(key) or folder.startswith(name.lower()):
-                extracted_folder = os.path.join(temp_dir, folder)
-                break
+        # TOCTOU fix: Use tempfile.mkdtemp for atomic temp dir
+        temp_dir = tempfile.mkdtemp(prefix=f"{key}_temp_update_", dir=os.path.dirname(path))
+        try:
+            with zipfile.ZipFile(io.BytesIO(zip_data)) as zip_ref:
+                # Zip-Slip fix: Use safe_extractall
+                safe_extractall(zip_ref, temp_dir)
                 
-        if extracted_folder:
-            for item in os.listdir(extracted_folder):
-                s = os.path.join(extracted_folder, item)
-                d = os.path.join(path, item)
-                if os.path.isdir(s):
-                    if os.path.exists(d):
-                        shutil.rmtree(d)
-                    shutil.copytree(s, d)
-                else:
-                    shutil.copy2(s, d)
+            extracted_folder = None
+            for folder in os.listdir(temp_dir):
+                if folder.startswith(key) or folder.startswith(name.lower()):
+                    extracted_folder = os.path.join(temp_dir, folder)
+                    break
                     
-            run_pip_install()
-            print(Fore.GREEN + f"    [+] {name} re-downloaded and updated successfully.")
-        else:
-            print(Fore.RED + f"    [!] Could not locate extracted files in zip.")
-            
-        if os.path.exists(temp_dir):
-            shutil.rmtree(temp_dir)
+            if extracted_folder:
+                for item in os.listdir(extracted_folder):
+                    s = os.path.join(extracted_folder, item)
+                    d = os.path.join(path, item)
+                    if os.path.isdir(s):
+                        if os.path.exists(d):
+                            shutil.rmtree(d)
+                        shutil.copytree(s, d)
+                    else:
+                        shutil.copy2(s, d)
+                        
+                run_pip_install()
+                print(Fore.GREEN + f"    [+] {name} re-downloaded and updated successfully.")
+            else:
+                print(Fore.RED + f"    [!] Could not locate extracted files in zip.")
+        finally:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
     except Exception as e:
         print(Fore.RED + f"    [!] Error downloading update: {e}")
 
@@ -1072,7 +1158,7 @@ def main():
                     continue
                 
                 print(Fore.YELLOW + f"\n  [+] Querying 300+ platforms for '{username}'...\n")
-                run_command(f"sherlock {username}")
+                run_command(["sherlock", username])
                 print()
                 input("  Press Enter to return to menu...")
                 
@@ -1094,7 +1180,7 @@ def main():
                     continue
                 
                 print(Fore.YELLOW + f"\n  [+] Querying registration endpoints for '{email}'...\n")
-                run_command(f"holehe {email}")
+                run_command(["holehe", email])
                 print()
                 input("  Press Enter to return to menu...")
                 
@@ -1106,7 +1192,7 @@ def main():
                 print(Fore.YELLOW + "  [+] Dashboard URL: http://127.0.0.1:5001")
                 print(Fore.RED + "  [+] Press Ctrl+C inside this window to stop the server.")
                 print()
-                run_command("spiderfoot")
+                run_command(["spiderfoot"])
                 print()
                 input("  Press Enter to return to menu...")
                 
@@ -1133,10 +1219,9 @@ def main():
                     time.sleep(3)
                     continue
                     
+                cmd = ["toutatis", "-u", username]
                 if sessionid:
-                    cmd = f"toutatis -u {username} -s {sessionid}"
-                else:
-                    cmd = f"toutatis -u {username}"
+                    cmd.extend(["-s", sessionid])
                 print(Fore.YELLOW + f"\n  [+] Querying Instagram API for '{username}'...\n")
                 run_command(cmd)
                 print()

@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # Required for OIDC Trusted Publishing
 
 jobs:
   deploy:
@@ -16,7 +17,16 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
+        python-version: '3.12'
+        
+    - name: Verify tag matches pyproject.toml version
+      run: |
+        TAG="${GITHUB_REF#refs/tags/}"
+        PYVER=$(python -c "import tomllib; f = open('pyproject.toml', 'rb'); d = tomllib.load(f); print(d['project']['version'])")
+        if [ "v$PYVER" != "$TAG" ]; then
+          echo "Tag $TAG does not match pyproject.toml version v$PYVER"
+          exit 1
+        fi
         
     - name: Install dependencies
       run: |
@@ -28,5 +38,3 @@ jobs:
       
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
