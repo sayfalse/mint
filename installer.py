@@ -223,16 +223,33 @@ def install_tool_from_github(key, info, target_dir, has_git):
             install_cmd = PIP_INSTALL + ["."]
             
         if install_cmd:
+            print(Fore.LIGHTBLACK_EX + "\n    [+] Installing dependencies in real-time:")
             process = subprocess.Popen(
                 install_cmd,
                 cwd=tool_path,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
-            stdout, stderr = process.communicate()
+            
+            # Print output in real-time
+            stdout_lines = []
+            while True:
+                line = process.stdout.readline()
+                if not line and process.poll() is not None:
+                    break
+                if line:
+                    stripped = line.strip()
+                    if stripped:
+                        print(Fore.LIGHTBLACK_EX + f"      {stripped}")
+                        stdout_lines.append(line)
+            
+            process.communicate() # Ensure process is fully closed
+            
             if process.returncode != 0:
                 print(Fore.RED + Style.BRIGHT + "[ FAILED  ]")
+                stderr = "".join(stdout_lines)
                 print(Fore.RED + f"    Error details:\n{stderr.strip()}")
                 
                 # Check for Termux system dependency errors
