@@ -1,6 +1,6 @@
 # Maintainer: sayfalse <sayfalse@users.noreply.github.com>
 pkgname=mint-osint-bin
-pkgver=1.0.9
+pkgver=1.0.10
 pkgrel=1
 pkgdesc="MINT — The Unified OSINT & Media Command Center"
 arch=('any')
@@ -11,7 +11,7 @@ makedepends=('git')
 provides=('mint-osint')
 conflicts=('mint-osint')
 source=("https://github.com/sayfalse/mint/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('8c27fb83a34298396ffcf4a034e271e6483ec9d3c7c46b1c587f03ecc5c8b38f')
 
 package() {
   cd "${srcdir}/mint-${pkgver}"

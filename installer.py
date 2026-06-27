@@ -467,6 +467,7 @@ def main():
     print(Fore.WHITE + "  ❯ Creating MINT Social folders...".ljust(55), end="", flush=True)
     
     def secure_cookie_dir(path):
+        """Restrict cookie directory to current user. Warn on failure."""
         if sys.platform.startswith('win'):
             try:
                 user = os.environ.get('USERNAME') or os.environ.get('USER')
@@ -475,17 +476,25 @@ def main():
                         ['icacls', path, '/inheritance:r', '/grant:r', f'{user}:(OI)(CI)(F)'],
                         check=True,
                         stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
+                        stderr=subprocess.PIPE
                     )
-            except:
-                pass
+            except subprocess.CalledProcessError as e:
+                err = e.stderr.decode(errors='replace').strip() if e.stderr else str(e)
+                print(Fore.YELLOW + f"\n  [!] Warning: could not restrict cookie dir ACLs: {err}")
+                print(Fore.YELLOW + "      Cookie files may be readable by other local users.")
+            except FileNotFoundError:
+                print(Fore.YELLOW + "\n  [!] icacls not found on PATH; cannot restrict cookie dir ACLs.")
+                print(Fore.YELLOW + "      Cookie files may be readable by other local users.")
+            except Exception as e:
+                print(Fore.YELLOW + f"\n  [!] Unexpected error securing cookie dir: {e}")
         else:
             try:
                 os.chmod(path, 0o700)
-            except:
-                pass
+            except OSError as e:
+                print(Fore.YELLOW + f"\n  [!] Warning: could not chmod cookie dir to 0700: {e}")
 
     def secure_cookie_file(path):
+        """Restrict cookie file to current user. Warn on failure."""
         if sys.platform.startswith('win'):
             try:
                 user = os.environ.get('USERNAME') or os.environ.get('USER')
@@ -494,21 +503,27 @@ def main():
                         ['icacls', path, '/inheritance:r', '/grant:r', f'{user}:(F)'],
                         check=True,
                         stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
+                        stderr=subprocess.PIPE
                     )
                     subprocess.run(
                         ['cipher', '/e', path],
                         check=False,
                         stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
+                        stderr=subprocess.PIPE
                     )
-            except:
-                pass
+            except subprocess.CalledProcessError as e:
+                err = e.stderr.decode(errors='replace').strip() if e.stderr else str(e)
+                print(Fore.YELLOW + f"\n  [!] Warning: could not restrict cookie file ACLs: {err}")
+                print(Fore.YELLOW + "      Cookie files may be readable by other local users.")
+            except FileNotFoundError:
+                print(Fore.YELLOW + "\n  [!] icacls not found on PATH; cannot restrict cookie file ACLs.")
+            except Exception as e:
+                print(Fore.YELLOW + f"\n  [!] Unexpected error securing cookie file: {e}")
         else:
             try:
                 os.chmod(path, 0o600)
-            except:
-                pass
+            except OSError as e:
+                print(Fore.YELLOW + f"\n  [!] Warning: could not chmod cookie file to 0600: {e}")
 
     try:
         os.makedirs(social_dir, exist_ok=True)

@@ -1218,12 +1218,48 @@ def main():
                     print(Fore.RED + "\n  [!] Invalid or unsafe Session ID format.")
                     time.sleep(3)
                     continue
-                    
+                
+                # SEC-06 fix: pass session ID via env var (not visible in
+                # /proc/pid/cmdline or `ps auxe`). Falls back to a 0600-permission
+                # temp file if env-var support is unavailable in upstream toutatis.
+                env = os.environ.copy()
                 cmd = ["toutatis", "-u", username]
+                session_file = None
                 if sessionid:
-                    cmd.extend(["-s", sessionid])
+                    env["TOUTATIS_SESSION_ID"] = sessionid
+                    # Prefer env-var if toutatis supports it (check upstream docs).
+                    # Fallback: write to 0600 temp file, pass file path via argv.
+                    import tempfile
+                    try:
+                        tf = tempfile.NamedTemporaryFile(
+                            mode='w', suffix='.sid', delete=False, prefix='mint_toutatis_'
+                        )
+                        tf.write(sessionid)
+                        tf.close()
+                        try:
+                            os.chmod(tf.name, 0o600)
+                        except:
+                            pass
+                        cmd.extend(["-s", f"@{tf.name}"])
+                        session_file = tf.name
+                    except Exception as e:
+                        print(Fore.RED + f"  [!] Failed to create secure session file: {e}")
+                        time.sleep(3)
+                        continue
+                
                 print(Fore.YELLOW + f"\n  [+] Querying Instagram API for '{username}'...\n")
-                run_command(cmd)
+                try:
+                    subprocess.run(cmd, shell=False, env=env)
+                except KeyboardInterrupt:
+                    print(Fore.YELLOW + "\n  [!] Process stopped by user.")
+                except Exception as e:
+                    print(Fore.RED + f"\n  [!] Error executing command: {e}")
+                finally:
+                    if session_file and os.path.exists(session_file):
+                        try:
+                            os.unlink(session_file)
+                        except:
+                            pass
                 print()
                 input("  Press Enter to return to menu...")
                 

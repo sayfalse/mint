@@ -9,32 +9,55 @@ permissions:
   id-token: write # Required for OIDC Trusted Publishing
 
 jobs:
-  deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
-        
+    - name: Install test deps
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff bandit
+    - name: Lint (ruff)
+      run: ruff check .
+    - name: Security scan (bandit)
+      run: bandit -r mint.py installer.py -ll
+    - name: Syntax-compile check
+      run: |
+        python -c "import ast; ast.parse(open('mint.py').read()); print('mint.py OK')"
+        python -c "import ast; ast.parse(open('installer.py').read()); print('installer.py OK')"
     - name: Verify tag matches pyproject.toml version
       run: |
         TAG="${GITHUB_REF#refs/tags/}"
-        PYVER=$(python -c "import tomllib; f = open('pyproject.toml', 'rb'); d = tomllib.load(f); print(d['project']['version'])")
+        PYVER=$(python -c "
+        import tomllib
+        with open('pyproject.toml','rb') as f:
+            d = tomllib.load(f)
+            print(d['project']['version'])
+        ")
         if [ "v$PYVER" != "$TAG" ]; then
           echo "Tag $TAG does not match pyproject.toml version v$PYVER"
           exit 1
         fi
-        
+
+  deploy:
+    needs: test # Do not publish if tests fail
+    runs-on: ubuntu-latest
+    environment: pypi # Required for PyPI Trusted Publishers OIDC
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install build
-        
     - name: Build package
       run: python -m build
-      
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
