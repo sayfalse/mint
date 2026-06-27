@@ -887,6 +887,113 @@ def run_social_tool_tui():
                         break
 
 def update_single_tool(key, name, path):
+    def patch_yesitsme(tool_path):
+        yesitsme_py = os.path.join(tool_path, "yesitsme.py")
+        if not os.path.exists(yesitsme_py):
+            return
+        try:
+            with open(yesitsme_py, "r", encoding="utf-8") as f:
+                content = f.read()
+                
+            old_get_user_id = r"""def getUserId(username, sessionsId):
+    cookies = {'sessionid': sessionsId}
+    headers = {'User-Agent': 'Instagram 64.0.0.14.96', }
+    r = get('https://www.instagram.com/{}/?__a=1'.format(username),
+            headers=headers, cookies=cookies)
+    try:
+        info = json.loads(r.text)
+        id = info["logging_page_id"].strip("profilePage_")
+        return({"id": id, "error": None})
+    except:
+        return({"id": None, "error": "User not found or rate limit"})"""
+
+            new_get_user_id = r"""def getUserId(username, sessionsId):
+    headers = {"User-Agent": "iphone_ua", "x-ig-app-id": "936619743392459"}
+    try:
+        r = get(
+            f'https://i.instagram.com/api/v1/users/web_profile_info/?username={username}',
+            headers=headers,
+            cookies={'sessionid': sessionsId}
+        )
+        if r.status_code == 404:
+            return {"id": None, "error": "User not found"}
+        id = r.json()["data"]['user']['id']
+        return {"id": id, "error": None}
+    except Exception:
+        return {"id": None, "error": "User not found or rate limit"}"""
+
+            old_dumpor = r"""def dumpor(name):
+    url = "https://dumpor.com/search?query="
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
+
+    req = url + name.replace(" ", "+")
+
+    try:
+        account_list = []
+        response = requests.get(req, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        accounts = soup.findAll('a', {"class": "profile-name-link"})
+        for account in accounts:
+            account_list.append(account.text)
+        return({"user": account_list, "error": None})
+    except:
+        return({"user": None, "error": "rate limit"})"""
+
+            new_dumpor = r"""def dumpor(name):
+    import urllib.parse
+    import re
+    url = 'https://search.yahoo.com/search?p=site:instagram.com+"' + name.replace(' ', '+') + '"'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    try:
+        account_list = []
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            return {"user": [], "error": f"HTTP {response.status_code}"}
+        soup = BeautifulSoup(response.text, 'html.parser')
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            match = re.search(r'/RU=([^/]+)', href)
+            if match:
+                try:
+                    real_url = urllib.parse.unquote(match.group(1))
+                    m = re.search(r'instagram\.com/([a-zA-Z0-9._\-]+)/?$', real_url)
+                    if m:
+                        username = m.group(1)
+                        if username not in ['p', 'developer', 'about', 'explore', 'directory', 'reels', 'reel']:
+                            account_list.append('@' + username)
+                except Exception:
+                    pass
+        seen = set()
+        deduped = []
+        for u in account_list:
+            if u not in seen:
+                seen.add(u)
+                deduped.append(u)
+        return {"user": deduped, "error": None}
+    except Exception as e:
+        return {"user": None, "error": str(e)}"""
+
+            content_norm = content.replace('\r\n', '\n')
+            old_get_user_id_norm = old_get_user_id.replace('\r\n', '\n')
+            new_get_user_id_norm = new_get_user_id.replace('\r\n', '\n')
+            old_dumpor_norm = old_dumpor.replace('\r\n', '\n')
+            new_dumpor_norm = new_dumpor.replace('\r\n', '\n')
+
+            if old_get_user_id_norm in content_norm:
+                content_norm = content_norm.replace(old_get_user_id_norm, new_get_user_id_norm)
+            if old_dumpor_norm in content_norm:
+                content_norm = content_norm.replace(old_dumpor_norm, new_dumpor_norm)
+                
+            with open(yesitsme_py, "w", encoding="utf-8") as f:
+                f.write(content_norm)
+        except Exception:
+            pass
+
+    if key == "yesitsme":
+        patch_yesitsme(path)
     def run_pip_install():
         try:
             pip_install = get_pip_install_cmd()
