@@ -1197,7 +1197,8 @@ def main():
                 print(Fore.YELLOW + "  [+] Dashboard URL: http://127.0.0.1:5001")
                 print(Fore.RED + "  [+] Press Ctrl+C inside this window to stop the server.")
                 print()
-                run_command(["spiderfoot"])
+                cmd = "spiderfoot.bat" if sys.platform.startswith('win') else "spiderfoot"
+                run_command([cmd])
                 print()
                 input("  Press Enter to return to menu...")
                 
@@ -1326,7 +1327,8 @@ def main():
                 # SEC-06 pattern: pass session ID via env var + 0600 temp file
                 # (copied from the toutatis handler - do NOT pass as raw argv)
                 env = os.environ.copy()
-                cmd = ["yesitsme", "-n", name, "-e", email, "-p", phone, "-t", timeout]
+                cmd_name = "yesitsme.bat" if sys.platform.startswith('win') else "yesitsme"
+                cmd = [cmd_name, "-n", name, "-e", email, "-p", phone, "-t", timeout]
                 session_file = None
                 env["YESITSME_SESSION_ID"] = sessionid
                 try:
