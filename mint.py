@@ -312,6 +312,8 @@ def is_safe_url(url):
     return bool(re.match(r'^[a-zA-Z0-9.:/?&=\-_+@%,]+$', url))
 
 def parse_profile_url(url, platform):
+    if not url:
+        return None
     url = url.strip()
     if not url:
         return None
