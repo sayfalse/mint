@@ -1233,10 +1233,13 @@ def main():
                     continue
                 
                 sessionid = prompt_input("Enter Instagram Session ID (optional - press Enter to skip)")
-                if sessionid and not re.match(r'^[a-zA-Z0-9:_]+$', sessionid):
-                    print(Fore.RED + "\n  [!] Invalid or unsafe Session ID format.")
-                    time.sleep(3)
-                    continue
+                if sessionid:
+                    import urllib.parse
+                    sessionid = urllib.parse.unquote(sessionid.strip())
+                    if not re.match(r'^[a-zA-Z0-9:_\-]+$', sessionid):
+                        print(Fore.RED + "\n  [!] Invalid or unsafe Session ID format.")
+                        time.sleep(3)
+                        continue
                 
                 # SEC-06 fix: pass session ID via env var (not visible in
                 # /proc/pid/cmdline or `ps auxe`). Falls back to a 0600-permission
@@ -1296,9 +1299,11 @@ def main():
                 sessionid = prompt_input("Enter YOUR Instagram Session ID (required)")
                 if not sessionid:
                     continue
-                if not re.match(r'^[a-zA-Z0-9:_]+$', sessionid):
+                import urllib.parse
+                sessionid = urllib.parse.unquote(sessionid.strip())
+                if not re.match(r'^[a-zA-Z0-9:_\-]+$', sessionid):
                     print(Fore.RED + "\n  [!] Invalid Session ID format.")
-                    print(Fore.YELLOW + "  [+] Must contain only letters, numbers, colons, underscores.")
+                    print(Fore.YELLOW + "  [+] Must contain only letters, numbers, colons, underscores, hyphens.")
                     time.sleep(3)
                     continue
                     
