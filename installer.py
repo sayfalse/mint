@@ -263,7 +263,6 @@ def install_tool_from_github(key, info, target_dir, has_git):
         setup_py = os.path.join(tool_path, "setup.py")
         pyproject = os.path.join(tool_path, "pyproject.toml")
         
-        install_cmd = None
         if os.path.exists(req_file):
             if key == "spiderfoot":
                 try:
@@ -276,6 +275,19 @@ def install_tool_from_github(key, info, target_dir, has_git):
                             f.write(new_content)
                 except Exception as e:
                     print(f"    [!] Warning: Failed to patch SpiderFoot requirements: {e}")
+            elif key == "yesitsme":
+                try:
+                    with open(req_file, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    # Patch for Python 3.13+ compatibility
+                    content = re.sub(r'httpx==0\.17\.1', 'httpx>=0.24.0', content)
+                    content = re.sub(r'requests==2\.22\.0', 'requests>=2.32.0', content)
+                    content = re.sub(r'colorama==0\.4\.3', 'colorama>=0.4.6', content)
+                    print(Fore.YELLOW + "    [!] Note: Patching yesitsme requirements.txt for Python 3.13+ compatibility.")
+                    with open(req_file, "w", encoding="utf-8") as f:
+                        f.write(content)
+                except Exception as e:
+                    print(f"    [!] Warning: Failed to patch yesitsme requirements: {e}")
             install_cmd = PIP_INSTALL + ["-r", req_file]
         elif os.path.exists(setup_py) or os.path.exists(pyproject):
             install_cmd = PIP_INSTALL + ["."]

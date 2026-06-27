@@ -911,6 +911,19 @@ def update_single_tool(key, name, path):
                             f.write(new_content)
                 except Exception as e:
                     print(Fore.RED + f"    [!] Warning: Failed to patch SpiderFoot requirements: {e}")
+            elif key == "yesitsme":
+                try:
+                    with open(req_file, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    # Patch for Python 3.13+ compatibility
+                    content = re.sub(r'httpx==0\.17\.1', 'httpx>=0.24.0', content)
+                    content = re.sub(r'requests==2\.22\.0', 'requests>=2.32.0', content)
+                    content = re.sub(r'colorama==0\.4\.3', 'colorama>=0.4.6', content)
+                    print(Fore.YELLOW + "    [!] Note: Patching yesitsme requirements.txt for Python 3.13+ compatibility.")
+                    with open(req_file, "w", encoding="utf-8") as f:
+                        f.write(content)
+                except Exception as e:
+                    print(Fore.RED + f"    [!] Warning: Failed to patch yesitsme requirements: {e}")
             install_cmd = pip_install + ["-r", req_file]
         elif os.path.exists(setup_py) or os.path.exists(pyproject):
             install_cmd = pip_install + ["."]
